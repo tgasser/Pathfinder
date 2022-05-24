@@ -35,7 +35,7 @@ def get_dflt_param(ipcc='AR6', passiveC_on=True, toc_adjust=True, calib_ecs=True
     param_unc = ['phi', 'T2x', 'THs', 'THd', 'th', 'eheat'] # climate
     param_unc += ['aOHC', 'Llin', 'Lthx', 'Ltot1'] + (ipcc == 'AR6') * ['Ltot2'] + ['tthx', 'tice'] + ['Tlia'] # slr
     param_unc += (toc_adjust) * ['k_toc'] + ['vgx', 'ggx', 'To', 'bdic', 'gdic'] # ocean
-    param_unc += ['npp0', 'vfire', 'vharv', 'vmort', 'vmet', 'vrh1', 'vrh2', 'bnpp', 'anpp', 'gnpp', 'bef', 'gef', 'brh', 'grh'] + (passiveC_on) * ['apass'] # land
+    param_unc += ['npp0', 'vfire', 'vharv', 'vmort', 'vstab', 'vrh1', 'vrh2', 'bnpp', 'anpp', 'gnpp', 'bfire', 'gfire', 'brh', 'grh'] + (passiveC_on) * ['apass'] # land
     param_unc += ['ga', 'ka', 'k_tth', 'Cfr0'] # pf
     param_unc += ['CO2pi'] # atmo
 
@@ -194,12 +194,12 @@ def get_dflt_param(ipcc='AR6', passiveC_on=True, toc_adjust=True, calib_ecs=True
     ## load from TRENDY models
     Par_tmp = get_param_landPI(data='TRENDYv7')
     ## take mean and unbiased std
-    for var in ['npp0', 'vfire', 'vharv', 'vmort', 'vmet', 'vrh1', 'vrh2']:
+    for var in ['npp0', 'vfire', 'vharv', 'vmort', 'vstab', 'vrh1', 'vrh2']:
         Par0[var][:] = [Par_tmp[var].mean(), Par_tmp[var].std() * np.sqrt((len(Par_tmp[var]) - 1.) / ((len(Par_tmp[var]) - 1.5)))]
         Par0[var].attrs['units'] = Par_tmp[var].units
         Par0[var].attrs['bounds'] = (0., np.inf)
     ## rename respiration rate of the last soil box
-    Par0 = Par0.rename({'vrh2':'vcs2'})
+    Par0 = Par0.rename({'vrh2':'vrh23'})
 
     ## turnover rate of passive carbon
     ## (He et al., 2016; doi:10.1126/science.aad4273) (Table 1; central value only)
@@ -220,11 +220,11 @@ def get_dflt_param(ipcc='AR6', passiveC_on=True, toc_adjust=True, calib_ecs=True
     ## load from CMIP models
     Par_tmp = get_param_land(log_npp=False, data='CMIP6' * (ipcc=='AR6') + 'CMIP5' * (ipcc=='AR5'))
     ## take mean and unbiased std
-    for var in ['bnpp', 'anpp', 'gnpp', 'bef', 'gef', 'brh', 'grh']:
+    for var in ['bnpp', 'anpp', 'gnpp', 'bfire', 'gfire', 'brh', 'grh']:
         Par0[var][:] = [Par_tmp[var].mean(), Par_tmp[var].std() * np.sqrt((len(Par_tmp[var]) - 1.) / ((len(Par_tmp[var]) - 1.5)))]
         Par0[var].attrs['units'] = Par_tmp[var].units
     for var in ['bnpp', 'anpp', 'brh', 'grh']: Par0[var].attrs['bounds'] = (0., np.inf)
-    for var in ['gnpp', 'bef', 'gef']: Par0[var].attrs['bounds'] = (-np.inf, np.inf)
+    for var in ['gnpp', 'bfire', 'gfire']: Par0[var].attrs['bounds'] = (-np.inf, np.inf)
 
 
     ##==================

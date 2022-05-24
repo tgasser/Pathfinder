@@ -377,16 +377,16 @@ def get_param_landPI(data='TRENDYv7'):
 
     ## intermediate variables (using surrogate when unavailable)
     Fmort = (Var.fVegLitter.fillna(0) + Var.fVegSoil.fillna(0)).where(Var.fVegLitter.notnull() | Var.fVegSoil.notnull(), Var.npp - Var.fFire.fillna(0) - Var.fLateral)
-    Fmet = Var.fLitterSoil.where(Var.fLitterSoil.notnull(), 0.5 * Var.rh)
+    Fstab = Var.fLitterSoil.where(Var.fLitterSoil.notnull(), 0.5 * Var.rh)
 
     ## calculate paramaters
     Par['npp0'] = Var.npp
     Par['vfire'] = Var.fFire / Var.cVeg
     Par['vharv'] = Var.fLateral / Var.cVeg
     Par['vmort'] = Fmort / Var.cVeg
-    Par['vmet'] = Fmet / Var.cLitter
-    Par['vrh1'] = (Var.rh - Fmet) / Var.cLitter
-    Par['vrh2'] = Fmet / Var.cSoil
+    Par['vstab'] = Fstab / Var.cLitter
+    Par['vrh1'] = (Var.rh - Fstab) / Var.cLitter
+    Par['vrh2'] = Fstab / Var.cSoil
 
     ## units
     for var in Par:
@@ -421,7 +421,7 @@ def get_param_land(data='CMIP6', log_npp=False, display_fit=False):
         raise ValueError
 
     ## initialise new parameters
-    for var in ['bnpp', 'anpp', 'gnpp', 'bef', 'gef', 'brh', 'grh']:
+    for var in ['bnpp', 'anpp', 'gnpp', 'bfire', 'gfire', 'brh', 'grh']:
         Par[var] = xr.zeros_like(Var.model_land, dtype=float)
 
     ## calibration of bnpp and gnpp
@@ -478,10 +478,10 @@ def get_param_land(data='CMIP6', log_npp=False, display_fit=False):
         if len(year_ok) > 0:
             err2 = lambda par: (( (1 + par[0] * (co2 / co2_0 - 1)) * (1 + par[1] * (tas - tas_0))  - (fFire / fFire_0 * cVeg_0 / cVeg) )**2.).sum().values
             par, _, _, _, fmin_flag = fmin(err2, [0., 0.], disp=False, full_output=True)
-            Par['bef'][m] = par[0] if fmin_flag == 0 else np.nan
-            Par['gef'][m] = par[1] if fmin_flag == 0 else np.nan
+            Par['bfire'][m] = par[0] if fmin_flag == 0 else np.nan
+            Par['gfire'][m] = par[1] if fmin_flag == 0 else np.nan
         else:
-            Par['bef'][m], Par['gef'][m] = np.nan, np.nan
+            Par['bfire'][m], Par['gfire'][m] = np.nan, np.nan
         
         ## plot fit
         if display_fit:
@@ -490,7 +490,7 @@ def get_param_land(data='CMIP6', log_npp=False, display_fit=False):
             plt.plot(fFire / fFire_0 * cVeg_0 / cVeg, marker='+', ls='none')
             plt.plot((1 + Par['bef'][m] * (co2 / co2_0 - 1)) * (1 + Par['gef'][m] * (tas - tas_0)), color='k')
             plt.title('co2, tas => fFire | ' + str(model.values) + '\n' + 
-                'bef = {0:.4f}, gef = {1:.4f}'.format(Par['bef'][m].values, Par['gef'][m].values), fontsize='small')
+                'bfire = {0:.4f}, gfire = {1:.4f}'.format(Par['bef'][m].values, Par['gef'][m].values), fontsize='small')
 
     ## calibration of brh and grh
     if display_fit: plt.figure()
@@ -528,8 +528,8 @@ def get_param_land(data='CMIP6', log_npp=False, display_fit=False):
                 'brh = {0:.4f}, grh = {1:.4f}'.format(Par['brh'][m].values, Par['grh'][m].values), fontsize='small')
 
     ## units
-    Par['bnpp'].attrs['units'] = Par['anpp'].attrs['units'] = Par['bef'].attrs['units'] = Par['brh'].attrs['units'] = '1'
-    Par['gnpp'].attrs['units'] = Par['gef'].attrs['units'] = Par['grh'].attrs['units'] = 'K-1'
+    Par['bnpp'].attrs['units'] = Par['anpp'].attrs['units'] = Par['bfire'].attrs['units'] = Par['brh'].attrs['units'] = '1'
+    Par['gnpp'].attrs['units'] = Par['gfire'].attrs['units'] = Par['grh'].attrs['units'] = 'K-1'
 
     ## return
     return Par

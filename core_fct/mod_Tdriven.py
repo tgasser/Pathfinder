@@ -35,7 +35,7 @@ Var_name = ['Td',
 Var2_name = ['RFco2', 'ERF', 'CO2', 'd_CO2', 
              'OHC', 'd_OHC', 'Hlin', 'd_Hlin', 'Hice', 'd_Hice',
              'Co', 'dic', 'pCO2', 'Focean', 
-             'NPP', 'Ewf', 'RH', 'Cs', 'Fland', 
+             'NPP', 'Efire', 'RH', 'Cs', 'Fland', 
              'abar', 'Epf', 'Cfr', 
              'pH', 'Eco2']
 
@@ -43,7 +43,7 @@ Var2_name = ['RFco2', 'ERF', 'CO2', 'd_CO2',
 Par_name = ['phi', 'T2x', 'THs', 'THd', 'th', 'eheat', 'T2x0',
             'aOHC', 'Llin', 'Lthx', 'Ltot1', 'Ltot2', 'tthx', 'tice', 'Tlia',
             'adic', 'aoc_1', 'aoc_2', 'aoc_3', 'aoc_4', 'aoc_5', 'toc_1', 'toc_2', 'toc_3', 'toc_4', 'toc_5', 'k_toc', 'vgx', 'ggx', 'To', 'bdic', 'gdic', 
-            'npp0', 'vfire', 'vharv', 'vmort', 'vmet', 'vrh1', 'vcs2', 'vrh3', 'apass', 'bnpp', 'anpp', 'gnpp', 'bef', 'gef', 'brh', 'grh', 
+            'npp0', 'vfire', 'vharv', 'vmort', 'vstab', 'vrh1', 'vrh23', 'vrh3', 'apass', 'bnpp', 'anpp', 'gnpp', 'bfire', 'gfire', 'brh', 'grh', 
             'aLST', 'grt1', 'grt2', 'krt', 'amin', 'ka', 'ga', 'vthaw', 'vfroz', 'ath_1', 'ath_2', 'ath_3', 'tth_1', 'tth_2', 'tth_3', 'k_tth', 'Cfr0', 
             'aCO2', 'CO2pi', 'k_pH']
     
@@ -61,16 +61,16 @@ def Ini_dflt(Par):
     [_, _, _, _, _, _, _,
     _, _, _, Ltot1, Ltot2, _, _, Tlia,
     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-    npp0, vfire, vharv, vmort, vmet, vrh1, vcs2, _, apass, _, _, _, _, _, _, _, 
+    npp0, vfire, vharv, vmort, vstab, vrh1, vrh23, _, apass, _, _, _, _, _, _, _, 
     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
     _, _, _] = [Par[n] for n in range(len(Par_name))]
 
     ## calculate variables
     Htot0 = (Ltot1 + Ltot2 * Tlia) * Tlia
     Cv0 = npp0 / (vfire + vharv + vmort)
-    Cl0 = Cv0 * vmort / (vrh1 + vmet)
-    Cs0 = Cl0 * vmet / vcs2 * (1 - apass)
-    Cp0 = Cl0 * vmet / vcs2 * apass
+    Cl0 = Cv0 * vmort / (vrh1 + vstab)
+    Cs0 = Cl0 * vstab / vrh23 * (1 - apass)
+    Cp0 = Cl0 * vstab / vrh23 * apass
 
     ## pack initial values
     Ini = [0, 
@@ -90,7 +90,7 @@ def v_linear(Par):
     [_, _, _, THd, th, _, _,
     _, _, _, _, _, tthx, tice, _,
     adic, aoc_1, aoc_2, aoc_3, aoc_4, aoc_5, toc_1, toc_2, toc_3, toc_4, toc_5, k_toc, vgx, _, To, bdic, _,
-    _, vfire, vharv, vmort, vmet, vrh1, vcs2, vrh3, apass, _, _, _, _, _, _, _, 
+    _, vfire, vharv, vmort, vstab, vrh1, vrh23, vrh3, apass, _, _, _, _, _, _, _, 
     _, _, _, _, _, _, _, vthaw, vfroz, _, _, _, tth_1, tth_2, tth_3, k_tth, _,
     _, _, _] = [Par[n] for n in range(len(Par_name))]
 
@@ -105,8 +105,8 @@ def v_linear(Par):
     v_Co_5 = 1. / toc_5 / k_toc  + aoc_5 * vgx * (1.5568 - 1.3993E-2 * To) * adic / bdic
     v_Cd = 1E-9
     v_Cv = vfire + vharv + vmort 
-    v_Cs1 = vmet + vrh1
-    v_Cs2 = vcs2 / (1 - apass)
+    v_Cs1 = vstab + vrh1
+    v_Cs2 = vrh23 / (1 - apass)
     v_Cs3 = vrh3
     v_a = 0.5 * (vthaw + vfroz)
     v_Cth_1 = 1. / tth_1 / k_tth
@@ -141,7 +141,7 @@ def d_Var(t, Var, Par, For=None, autonomous=False, tensor=False, expost=False):
     [phi, T2x, THs, THd, th, eheat, _,
     aOHC, Llin, Lthx, Ltot1, Ltot2, tthx, tice, _,
     adic, aoc_1, aoc_2, aoc_3, aoc_4, aoc_5, toc_1, toc_2, toc_3, toc_4, toc_5, k_toc, vgx, ggx, To, bdic, gdic,
-    npp0, vfire, vharv, vmort, vmet, vrh1, vcs2, vrh3, apass, bnpp, anpp, gnpp, bef, gef, brh, grh, 
+    npp0, vfire, vharv, vmort, vstab, vrh1, vrh23, vrh3, apass, bnpp, anpp, gnpp, bfire, gfire, brh, grh, 
     aLST, grt1, grt2, krt, amin, ka, ga, vthaw, vfroz, ath_1, ath_2, ath_3, tth_1, tth_2, tth_3, k_tth, Cfr0,
     aCO2, CO2pi, k_pH] = [Par[n] for n in range(len(Par_name))]
 
@@ -208,23 +208,23 @@ def d_Var(t, Var, Par, For=None, autonomous=False, tensor=False, expost=False):
     ## 4. LAND CARBON
     ## convenience
     r_npp = (1. + bnpp / anpp * (1. - (CO2 / CO2pi)**-anpp)) * (1. + gnpp * T)
-    r_ef = (1. + bef * (CO2 / CO2pi - 1.)) * (1. + gef * T)
-    r_rh = (1. + brh * (Cs1 / (Cs1 + Cs2 + Cs3) * (1. + vmet / vcs2) - 1.)) * exp(grh * T)
+    r_fire = (1. + bfire * (CO2 / CO2pi - 1.)) * (1. + gfire * T)
+    r_rh = (1. + brh * (Cs1 / (Cs1 + Cs2 + Cs3) * (1. + vstab / vrh23) - 1.)) * exp(grh * T)
     ## diagnostic
     NPP = npp0 * r_npp
-    Efire = vfire * r_ef * Cv 
+    Efire = vfire * r_fire * Cv 
     Eharv = vharv * Cv 
     Fmort = vmort * Cv
     RH1 = vrh1 * r_rh * Cs1
-    Fmet = vmet * r_rh * Cs1
-    RH2 = (vcs2 - vrh3 * apass) / (1. - apass) * r_rh * Cs2
+    Fstab = vstab * r_rh * Cs1
+    RH2 = (vrh23 - vrh3 * apass) / (1. - apass) * r_rh * Cs2
     Fpass = vrh3 * apass / (1. - apass) * r_rh * Cs2
     RH3 = vrh3 * r_rh * Cs3
     Fland = NPP - Efire - Eharv - RH1 - RH2 - RH3
     ## prognostic
     d_Cv = NPP - Efire - Eharv - Fmort
-    d_Cs1 = Fmort - Fmet - RH1
-    d_Cs2 = Fmet - Fpass - RH2
+    d_Cs1 = Fmort - Fstab - RH1
+    d_Cs2 = Fstab - Fpass - RH2
     d_Cs3 = Fpass - RH3
     ## diagnostic 2
     RH = RH1 + RH2 + RH3
