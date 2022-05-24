@@ -1,0 +1,4 @@
+*
+!.gitignore
+!*_v1*.nc
+!*_v1*.csv
