@@ -17,5 +17,5 @@ folder_out = 'internal_data/pyMC_calib/'
 exec_calib(folder_out=folder_out, method=method, name=name)
 
 ## execute post-processing
-post_calib(folder_calib=folder_out + method + '__' + name, make_prior=True, write_csv=True)
+post_calib(folder_calib=folder_out + method + '__' + name, save_prior=False, save_Var2=False, write_csv=True)
 

@@ -125,14 +125,14 @@ def build_model(Par0=None, For0=None, Con0=None, std_max=4, ignore_constr=[], un
         T_std = tt.as_tensor_variable(For0.T.sel(stat='std').values)
         if with_noise:
             if uniform_prior:
-                rho_T = pm.Uniform('rho_T', lower=0, upper=1)
-                T_noise = pm.Uniform('T_noise', lower=0, upper=std_max*0.02)
+                corr_T = pm.Uniform('corr_T', lower=0, upper=1)
+                ampl_T = pm.Uniform('ampl_T', lower=0, upper=std_max*0.02)
             else:
-                rho_T = pm.LogitNormal('rho_T', mu=5, sigma=1)
-                T_noise = pm.Bound(pm.HalfNormal, lower=0, upper=std_max*0.02)('T_noise', sigma=0.02)
-            ar_T = my_AR1('ar_T', k=rho_T, shape=n_year)
+                corr_T = pm.LogitNormal('corr_T', mu=5, sigma=1)
+                ampl_T = pm.Bound(pm.HalfNormal, lower=0, upper=std_max*0.02)('ampl_T', sigma=0.02)
+            ar_T = my_AR1('ar_T', k=corr_T, shape=n_year)
         else:
-            ar_T, T_noise = 0., 0.
+            ar_T, ampl_T = 0., 0.
         std_T = pm.Bound(pm.Normal, lower=-std_max*1, upper=+std_max*1)('std_T', mu=0, sigma=1)
 
         ## CO2
@@ -140,21 +140,21 @@ def build_model(Par0=None, For0=None, Con0=None, std_max=4, ignore_constr=[], un
         CO2_std = tt.as_tensor_variable(For0.CO2.sel(stat='std').values)
         if with_noise:
             if uniform_prior:
-                rho_CO2 = pm.Uniform('rho_CO2', lower=0, upper=1)
-                CO2_noise = pm.Uniform('CO2_noise', lower=0, upper=std_max*0.5)
+                corr_CO2 = pm.Uniform('corr_CO2', lower=0, upper=1)
+                ampl_CO2 = pm.Uniform('ampl_CO2', lower=0, upper=std_max*0.5)
             else:
-                rho_CO2 = pm.LogitNormal('rho_CO2', mu=5, sigma=1)
-                CO2_noise = pm.Bound(pm.HalfNormal, lower=0, upper=std_max*0.5)('CO2_noise', sigma=0.5)
-            ar_CO2 = my_AR1('ar_CO2', k=rho_CO2, shape=n_year)
+                corr_CO2 = pm.LogitNormal('corr_CO2', mu=5, sigma=1)
+                ampl_CO2 = pm.Bound(pm.HalfNormal, lower=0, upper=std_max*0.5)('ampl_CO2', sigma=0.5)
+            ar_CO2 = my_AR1('ar_CO2', k=corr_CO2, shape=n_year)
         else:
-            ar_CO2, CO2_noise = 0., 0.
+            ar_CO2, ampl_CO2 = 0., 0.
         std_CO2 = pm.Bound(pm.Normal, lower=-std_max*1, upper=+std_max*1)('std_CO2', mu=0, sigma=1)
 
         ## pack drivers in dict
         forcing = {}
-        forcing['T'] = pm.Deterministic('T', T_mean + std_T * T_std + ar_T * T_noise)
+        forcing['T'] = pm.Deterministic('T', T_mean + std_T * T_std + ampl_T * ar_T)
         forcing['d_T'] = pm.Deterministic('d_T', tt.stack(gradient(forcing['T'], n_year)))
-        forcing['CO2'] = pm.Deterministic('CO2', CO2_mean + std_CO2 * CO2_std + ar_CO2 * CO2_noise)
+        forcing['CO2'] = pm.Deterministic('CO2', CO2_mean + std_CO2 * CO2_std + ampl_CO2 * ar_CO2)
         forcing['d_CO2'] = pm.Deterministic('d_CO2', tt.stack(gradient(forcing['CO2'], n_year)))
 
 
@@ -277,10 +277,13 @@ def exec_calib(folder_out='internal_data/pyMC_calib/', method='FullRankADVI', na
 ##################################################
 
 ## function to post-process one set of calibration
-def post_calib(folder_calib, name=None, make_prior=False, write_csv=False, years_csv=slice(2015-2, 2015+2), **model_args):
+def post_calib(folder_calib, name=None, save_prior=False, save_Var2=False, write_csv=False, years_csv=slice(2015-2, 2015+2), **model_args):
     
     ## get ignored constraints (if any)
     ignore_constr = model_args['ignore_constr'] if 'ignore_constr' in model_args else []
+
+    ## AR1 parameters (names as in build_model, with units)
+    ar1_pars = {'std_T': '1', 'ampl_T': 'K', 'corr_T': '1', 'std_CO2': '1', 'ampl_CO2': 'ppm', 'corr_CO2': '1'}
 
     ##==========
     ## Posterior
@@ -293,7 +296,7 @@ def post_calib(folder_calib, name=None, make_prior=False, write_csv=False, years
 
     ## load calibration
     with np.load(open(folder_calib + '/sample.npz', 'rb')) as TMP:
-        Par_post = xr.Dataset({var:(('config'), TMP[var]) for var in TMP.keys() if var in PF.Par_name})
+        Par_post = xr.Dataset({var:(('config'), TMP[var]) for var in TMP.keys() if var in PF.Par_name + list(ar1_pars.keys())})
         For_post = xr.Dataset({var:(('year', 'config'), TMP[var].T) for var in TMP.keys() if var in PF.For_name})
 
     ## format
@@ -305,7 +308,7 @@ def post_calib(folder_calib, name=None, make_prior=False, write_csv=False, years
     Par_post = xr.merge([Par_post, Par0.drop([var for var in Par_post if var in Par0] + ['stat'])])
 
     ## re-run historical period
-    Out_post = PF.run_xarray(Par_post, For_post, scheme='imex', nt=4)
+    Out_post = PF.run_xarray(Par_post, For_post, scheme='imex', nt=4, get_Var2=True)
 
     ## get constraints values
     Con_post = xr.Dataset()
@@ -317,7 +320,7 @@ def post_calib(folder_calib, name=None, make_prior=False, write_csv=False, years
         elif Con0[var].is_diff: Con_post[var] = TMP[-1] - TMP[0]
 
     ## add units
-    for var in Par_post: Par_post[var].attrs['units'] = Par0[var].units
+    for var in Par_post: Par_post[var].attrs['units'] = Par0[var].units if var in Par0 else ar1_pars[var]
     for var in For_post: For_post[var].attrs['units'] = For0[var].units
     for var in Con_post: Con_post[var].attrs['units'] = Con0[var].units
 
@@ -327,7 +330,7 @@ def post_calib(folder_calib, name=None, make_prior=False, write_csv=False, years
 
     ## make prior if requested
     Par_prior = For_prior = Out_prior = None
-    if make_prior:
+    if save_prior:
 
         ## reload pyMC3 model
         model = build_model(**model_args)
@@ -339,22 +342,21 @@ def post_calib(folder_calib, name=None, make_prior=False, write_csv=False, years
         CO2_std = For0.CO2.sel(stat='std').values
 
         ## sample prior parameters
-        prior_vars = ['rho_CO2', 'std_CO2', 'CO2_noise'] + ['rho_T', 'std_T', 'T_noise']
         with model:
-            sample = pm.sample_prior_predictive(len(Par_post.config), var_names=[var for var in PF.Par_name if 'stat' in Par0[var].dims] + prior_vars)
+            sample = pm.sample_prior_predictive(len(Par_post.config), var_names=[var for var in PF.Par_name if 'stat' in Par0[var].dims] + list(ar1_pars.keys()))
             
         ## AR1 timeseries (because sampling not possible...)
         ar_T = [np.random.normal(0, 1, size=len(Par_post.config))]
         for _ in range(1, len(For0.year)): 
-            ar_T.append( sample['rho_T'] * ar_T[-1] + np.random.normal(0, np.sqrt(1 - sample['rho_T']**2)) )
+            ar_T.append( sample['corr_T'] * ar_T[-1] + np.random.normal(0, np.sqrt(1 - sample['corr_T']**2)) )
         ar_CO2 = [np.random.normal(0, 1, size=len(Par_post.config))]
         for _ in range(1, len(For0.year)): 
-            ar_CO2.append( sample['rho_CO2'] * ar_CO2[-1] + np.random.normal(0, np.sqrt(1 - sample['rho_CO2']**2)) )
+            ar_CO2.append( sample['corr_CO2'] * ar_CO2[-1] + np.random.normal(0, np.sqrt(1 - sample['corr_CO2']**2)) )
 
         ## add deterministic variables to sample
-        sample['T'] = T_mean[:,np.newaxis] + sample['std_T'][np.newaxis,:] * T_std[:,np.newaxis] + np.array(ar_T) * sample['T_noise'][np.newaxis,:]
+        sample['T'] = T_mean[:,np.newaxis] + sample['std_T'][np.newaxis,:] * T_std[:,np.newaxis] +  sample['ampl_T'][np.newaxis,:] * np.array(ar_T)
         sample['d_T'] = np.gradient(sample['T'], edge_order=2, axis=0)
-        sample['CO2'] = CO2_mean[:,np.newaxis] + sample['std_CO2'][np.newaxis,:] * CO2_std[:,np.newaxis] + np.array(ar_CO2) * sample['CO2_noise'][np.newaxis,:]
+        sample['CO2'] = CO2_mean[:,np.newaxis] + sample['std_CO2'][np.newaxis,:] * CO2_std[:,np.newaxis] + sample['ampl_CO2'][np.newaxis,:] * np.array(ar_CO2)
         sample['d_CO2'] = np.gradient(sample['CO2'], edge_order=2, axis=0)
 
         ## put in xarray
@@ -368,7 +370,7 @@ def post_calib(folder_calib, name=None, make_prior=False, write_csv=False, years
 
         ## as previously
         Par_prior = xr.merge([Par_prior, Par0.drop([var for var in Par_prior if var in Par0] + ['stat'])])
-        Out_prior = PF.run_xarray(Par_prior, For_prior, scheme='imex', nt=4)
+        Out_prior = PF.run_xarray(Par_prior, For_prior, scheme='imex', nt=4, get_Var2=True)
 
         ## get constraints values
         Con_prior = xr.Dataset()
@@ -380,7 +382,7 @@ def post_calib(folder_calib, name=None, make_prior=False, write_csv=False, years
             elif Con0[var].is_diff: Con_prior[var] = TMP[-1] - TMP[0]
 
         ## add units
-        for var in Par_prior: Par_prior[var].attrs['units'] = Par0[var].units
+        for var in Par_prior: Par_prior[var].attrs['units'] = Par0[var].units if var in Par0 else ar1_pars[var]
         for var in For_prior: For_prior[var].attrs['units'] = For0[var].units
         for var in Con_prior: Con_prior[var].attrs['units'] = Con0[var].units
 
@@ -393,16 +395,28 @@ def post_calib(folder_calib, name=None, make_prior=False, write_csv=False, years
 
     ## save everything as netcdf
     ## save posterior
-    Par_post.to_netcdf(folder_calib + '/../Par_' + name + '.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Par_post})
-    For_post.to_netcdf(folder_calib + '/../For_' + name + '.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in For_post})
-    Out_post.to_netcdf(folder_calib + '/../Out_' + name + '.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Out_post})
+    Par2_post = Par_post.drop(var for var in Par_post if var not in ar1_pars.keys())
+    Par2_post.to_netcdf(folder_calib + '/../Par2_' + name + '.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Par2_post})
+    Par1_post = Par_post.drop(ar1_pars.keys())
+    Par1_post.to_netcdf(folder_calib + '/../Par_' + name + '.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Par1_post})
+    Var_post = xr.merge([For_post, Out_post.drop([var for var in Out_post if var not in PF.Var_name])])
+    Var_post.to_netcdf(folder_calib + '/../Var_' + name + '.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Var_post})
+    if save_Var2:
+        Var2_post = Out_post.drop([var for var in Out_post if var in PF.Var_name])
+        Var2_post.to_netcdf(folder_calib + '/../Var2_' + name + '.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Var2_post})
     Con_post.to_netcdf(folder_calib + '/../Con_' + name + '.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Con_post})
-    
+
     ## save prior
-    if make_prior:
-        Par_prior.to_netcdf(folder_calib + '/../Par_' + name + '_prior.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Par_prior})
-        For_prior.to_netcdf(folder_calib + '/../For_' + name + '_prior.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in For_prior})
-        Out_prior.to_netcdf(folder_calib + '/../Out_' + name + '_prior.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Out_prior})
+    if save_prior:
+        Par2_prior = Par_prior.drop(var for var in Par_prior if var not in ar1_pars.keys())
+        Par2_prior.to_netcdf(folder_calib + '/../Par2_' + name + '_prior.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Par2_prior})
+        Par1_prior = Par_prior.drop(ar1_pars.keys())
+        Par1_prior.to_netcdf(folder_calib + '/../Par_' + name + '_prior.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Par1_prior})
+        Var_prior = xr.merge([For_prior, Out_prior])
+        Var_prior.to_netcdf(folder_calib + '/../Var_' + name + '_prior.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Var_prior})
+        if save_Var2:
+            Var2_prior = Out_prior.drop([var for var in Out_prior if var in PF.Var_name])
+            Var2_prior.to_netcdf(folder_calib + '/../Var2_' + name + '_prior.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Var2_prior})
         Con_prior.to_netcdf(folder_calib + '/../Con_' + name + '_prior.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Con_prior})
 
     ## also write only partial info in csv if requested
@@ -413,15 +427,14 @@ def post_calib(folder_calib, name=None, make_prior=False, write_csv=False, years
         year_str = str(int(year_ini)) if year_ini.is_integer() else '{:.1f}'.format(year_ini)
         
         ## save posterior
-        Par_post.astype(np.float32).to_dataframe().to_csv(folder_calib + '/../Par_' + name + '.csv')
-        Ini_post = xr.merge([For_post, Out_post]).sel(year=years_csv).mean('year')
+        Par1_post.astype(np.float32).to_dataframe().to_csv(folder_calib + '/../Par_' + name + '.csv')
+        Ini_post = Var_post.sel(year=years_csv).mean('year')
         Ini_post.astype(np.float32).to_dataframe().to_csv(folder_calib + '/../Ini_' + year_str + '_' + name + '.csv')
-        Con_post.astype(np.float32).to_dataframe().to_csv(folder_calib + '/../Con_' + name + '.csv')
         
         ## save prior
-        if make_prior:
-            Par_prior.astype(np.float32).to_dataframe().to_csv(folder_calib + '/../Par_' + name + '_prior.csv')
-            Ini_prior = xr.merge([For_prior, Out_prior]).sel(year=years_csv).mean('year')
+        if save_prior:
+            Par1_prior.astype(np.float32).to_dataframe().to_csv(folder_calib + '/../Par_' + name + '_prior.csv')
+            Ini_prior = Var_prior.sel(year=years_csv).mean('year')
             Ini_prior.astype(np.float32).to_dataframe().to_csv(folder_calib + '/../Ini_' + year_str + '_' + name + '_prior.csv')
             Con_prior.astype(np.float32).to_dataframe().to_csv(folder_calib + '/../Con_' + name + '_prior.csv')
 
@@ -432,5 +445,5 @@ def post_calib(folder_calib, name=None, make_prior=False, write_csv=False, years
             xr.Dataset({var: xr.DataArray(Con0[var].attrs['is_diff'], coords={'stat':['is_diff']}, dims=['stat']) for var in Con0}), 
             xr.Dataset({var: xr.DataArray(str(Con0[var].attrs['period']), coords={'stat':['period']}, dims=['stat']) for var in Con0}), 
             xr.Dataset({var: xr.DataArray(Con0[var].attrs['units'], coords={'stat':['units']}, dims=['stat']) for var in Con0})]
-        xr.concat(Con_stat, dim='stat').drop([var for var in Con0 if var in ignore_constr]).to_dataframe().to_csv(folder_calib + '/../Con_' + name + '_stat.csv')
+        xr.concat(Con_stat, dim='stat').drop([var for var in Con0 if var in ignore_constr]).to_dataframe().to_csv(folder_calib + '/../Con0_' + name + '.csv')
 

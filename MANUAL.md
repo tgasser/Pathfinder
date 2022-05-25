@@ -14,6 +14,7 @@
 | <img src="https://latex.codecogs.com/gif.latex?R" /> | `ERF` | Effective radiative forcing | W m<sup>-2</sup> |||
 | <img src="https://latex.codecogs.com/gif.latex?T" /> | `T` | Global surface temperature anomaly | K | *yes* ||
 | <img src="https://latex.codecogs.com/gif.latex?T_d" /> | `Td` | Deep ocean temperature anomaly | K | *yes* ||
+| <img src="https://latex.codecogs.com/gif.latex?\mathrm{logit} (\mathrm{ff})" /> | `logit_ff` | Logit of the climate feedback factor (for calib.) | 1 |||
 |||||||
 | <img src="https://latex.codecogs.com/gif.latex?U_\mathrm{ohc}" /> | `OHC` | Ocean heat content (anomaly) | W yr m<sup>-2</sup> |||
 | <img src="https://latex.codecogs.com/gif.latex?H_\mathrm{lin}" /> | `Hlin` | Linear part of thermosteric sea level rise | mm |||
@@ -71,6 +72,7 @@
 | <img src="https://latex.codecogs.com/gif.latex?\Theta_d" /> | `THd` | Heat capacity of the deep ocean | W yr m<sup>-2</sup> K<sup>-1</sup> ||
 | <img src="https://latex.codecogs.com/gif.latex?\theta" /> | `th` | Heat exchange coefficient | W m<sup>-2</sup> K<sup>-1</sup> ||
 | <img src="https://latex.codecogs.com/gif.latex?\epsilon_\mathrm{heat}" /> | `eheat` | Deep ocean heat uptake efficacy | 1 ||
+| <img src="https://latex.codecogs.com/gif.latex?T_\mathrm{2\times}^*" /> | `T2x0` | Minimal value of the ECS distribution (for calib.) | K ||
 ||||||
 | <img src="https://latex.codecogs.com/gif.latex?\alpha_\mathrm{ohc}" /> | `aOHC` | Fraction of energy warming the ocean | 1 ||
 | <img src="https://latex.codecogs.com/gif.latex?\Lambda_\mathrm{lin}" /> | `Llin` | Linear factor for thermosteric SLR | mm m<sup>2</sup> W<sup>-1</sup> yr<sup>-1</sup> ||
@@ -124,6 +126,13 @@
 | <img src="https://latex.codecogs.com/gif.latex?\alpha_C" /> | `aCO2` | Conversion factor for atmospheric CO2 | PgC ppm<sup>-1</sup> ||
 | <img src="https://latex.codecogs.com/gif.latex?C_\mathrm{pi}" /> | `CO2pi` | Preindustrial CO2 concentration | ppm ||
 | <img src="https://latex.codecogs.com/gif.latex?\kappa_\mathrm{pH}" /> | `k_pH` | Scaling factor for surface ocean pH | 1 ||
+||||||
+| <img src="https://latex.codecogs.com/gif.latex?\tilde{\sigma}_C" /> | `std_CO2` | Relative standard deviation of the historical `CO2` time series (for calib.) | 1 ||
+| <img src="https://latex.codecogs.com/gif.latex?\epsilon_C" /> | `ampl_CO2` | Noise amplitude of the historical `CO2` time series (for calib.) | ppm ||
+| <img src="https://latex.codecogs.com/gif.latex?\rho_C" /> | `corr_CO2` | Autocorrelation of the historical `CO2` time series (for calib.) | 1 ||
+| <img src="https://latex.codecogs.com/gif.latex?\tilde{\sigma}_T" /> | `std_T` | Relative standard deviation of the historical `T` time series (for calib.) | 1 ||
+| <img src="https://latex.codecogs.com/gif.latex?\epsilon_T" /> | `ampl_T` | Noise amplitude of the historical `T` time series (for calib.) | K ||
+| <img src="https://latex.codecogs.com/gif.latex?\rho_T" /> | `corr_T` | Autocorrelation of the historical `T` time series (for calib.) | 1 ||
 
 <!--------->
 <!--------->
@@ -152,6 +161,13 @@ R - \frac{\phi \: \ln (2)}{T_{2\times}} \: T - \epsilon_\mathrm{heat} \: \theta 
 * <img style="vertical-align:middle" src="https://latex.codecogs.com/gif.latex? 
 \Theta_d \: \frac{\mathrm{d} T_d}{\mathrm{d} t} = 
 \theta \: (T - T_d)
+" />
+
+###### diagnostic (2nd; for calib.)
+
+* <img style="vertical-align:middle" src="https://latex.codecogs.com/gif.latex?
+\mathrm{logit} (\mathrm{ff}) = 
+\ln \! \left( \frac{T_{2\times}}{T_{2\times}^*} - 1 \right)
 " />
 
 <!------------->

@@ -41,7 +41,7 @@ class WrapModel:
 
 
     ## run with solver (only one extra dim okay)
-    def run_solver(self, param, forc, init=None, method='LSODA'):
+    def run_solver(self, param, forc, init=None, method='LSODA', get_Var2=False):
         
         ## turn into ndarray
         param = {var: np.array(param[var]).squeeze() for var in self.Par_name}
@@ -78,7 +78,7 @@ class WrapModel:
 
         ## create output
         var_prog = np.zeros((len(self.Var_name), n_year, n_config))
-        var_diag = np.zeros((len(self.Var2_name) + len(self.Var_name), n_year, n_config))
+        if get_Var2: var_diag = np.zeros((len(self.Var2_name) + len(self.Var_name), n_year, n_config))
 
         ## loop on config
         print('*solving*')
@@ -92,23 +92,23 @@ class WrapModel:
             ## get results if convergence
             if sol_solver.success: 
                 var_prog[..., n] = sol_solver.y
-                var_diag[..., n] = self.d_Var(None, var_prog[..., n], param_ok[..., n], forc_ok[..., n], autonomous=True, tensor=False, expost=True)
+                if get_Var2: var_diag[..., n] = self.d_Var(None, var_prog[..., n], param_ok[..., n], forc_ok[..., n], autonomous=True, tensor=False, expost=True)
             else: 
                 print('solver failed! (config = ' + str(n) + ')')
                 var_prog[..., n] *= np.nan
-                var_diag[..., n] *= np.nan
+                if get_Var2: var_diag[..., n] *= np.nan
 
         ## pack in dictionnaries
         var_prog = {var: var_prog[n, ...].squeeze() for n, var in enumerate(self.Var_name)}
-        var_diag = {'d_' * (var in self.Var_name) + var: var_diag[n, ...].squeeze() for n, var in enumerate(self.Var2_name + self.Var_name)}
+        if get_Var2: var_diag = {'d_' * (var in self.Var_name) + var: var_diag[n, ...].squeeze() for n, var in enumerate(self.Var2_name + self.Var_name)}
 
         ## return
         print('')
-        return {'t': np.arange(n_year), **var_prog, **var_diag}
+        return {'t': np.arange(n_year), **var_prog, **(var_diag if get_Var2 else {})}
     
 
     ## run with solving scheme for big xarrays
-    def run_xarray(self, Par, For, Ini=None, time_axis='year', scheme='imex', nt=4):
+    def run_xarray(self, Par, For, Ini=None, time_axis='year', scheme='imex', nt=4, get_Var2=False):
 
         ## get time
         time0 = For[time_axis][0]
@@ -148,12 +148,35 @@ class WrapModel:
         Var_out = xr.concat(Var_out, dim=time_axis)
         Var_out = Var_out.astype(np.float32)
 
-        ## one last call for derivatives
-        Var_out2 = self.d_Var(time - time0, [Var_out[var] for var in self.Var_name], Par_ok, For_ok, autonomous=False, tensor=False, expost=True)
-        Var_out2 = xr.Dataset({'d_' * (var in self.Var_name) + var: 0.*time + val for var, val in zip(self.Var2_name + self.Var_name, Var_out2)})
-        Var_out2 = Var_out2.astype(np.float32)
+        ## one last call for secondar variables and derivatives (if requested)
+        if get_Var2:
+            Var2_out = self.d_Var(time - time0, [Var_out[var] for var in self.Var_name], Par_ok, For_ok, autonomous=False, tensor=False, expost=True)
+            Var2_out = xr.Dataset({'d_' * (var in self.Var_name) + var: 0.*time + val for var, val in zip(self.Var2_name + self.Var_name, Var2_out)})
+            Var2_out = Var2_out.astype(np.float32)
+        else:
+            Var2_out = xr.Dataset()
 
         ## return
         print('')
-        return xr.merge([Var_out, Var_out2])
+        return xr.merge([Var_out, Var2_out])
+
+    
+    ## get secondary (= diagnostic) variables from main (= prognostic) variables
+    def get_Var2(self, Var, Par, For, time_axes=['year', 't']):
+        
+        ## get time
+        assert any([time_axis in Dat for time_axis in time_axes for Dat in [Var, For]])
+        for time_axis in time_axes:
+            if time_axis in Var: Dat = Var
+            elif time_axis in For: Dat = For
+            time = Dat[time_axis] 
+            time0 = Dat[time_axis][0]
+            pass
+
+        ## one call for all secondary variables
+        Var2_out = self.d_Var(time - time0, [Var[var] for var in self.Var_name], [Par[var] for var in self.Par_name], [For[var] for var in self.For_name], autonomous=False, tensor=False, expost=True)
+        Var2_out = Var2_out.astype(np.float32)
+
+        ## return
+        return Var2_out
 
