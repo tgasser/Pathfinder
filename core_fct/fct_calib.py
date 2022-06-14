@@ -360,7 +360,7 @@ def post_calib(folder_calib, name=None, save_prior=False, save_Var2=False, write
         sample['d_CO2'] = np.gradient(sample['CO2'], edge_order=2, axis=0)
 
         ## put in xarray
-        Par_prior = xr.Dataset({var:(('config'), sample[var]) for var in sample.keys() if var in PF.Par_name})
+        Par_prior = xr.Dataset({var:(('config'), sample[var]) for var in sample.keys() if var in PF.Par_name + list(ar1_pars.keys())})
         For_prior = xr.Dataset({var:(('year', 'config'), sample[var]) for var in sample.keys() if var in PF.For_name})
     
         ## format
@@ -412,7 +412,7 @@ def post_calib(folder_calib, name=None, save_prior=False, save_Var2=False, write
         Par2_prior.to_netcdf(folder_calib + '/../Par2_' + name + '_prior.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Par2_prior})
         Par1_prior = Par_prior.drop(ar1_pars.keys())
         Par1_prior.to_netcdf(folder_calib + '/../Par_' + name + '_prior.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Par1_prior})
-        Var_prior = xr.merge([For_prior, Out_prior])
+        Var_prior = xr.merge([For_prior, Out_prior.drop([var for var in Out_prior if var not in PF.Var_name])])
         Var_prior.to_netcdf(folder_calib + '/../Var_' + name + '_prior.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Var_prior})
         if save_Var2:
             Var2_prior = Out_prior.drop([var for var in Out_prior if var in PF.Var_name])
@@ -436,14 +436,13 @@ def post_calib(folder_calib, name=None, save_prior=False, save_Var2=False, write
             Par1_prior.astype(np.float32).to_dataframe().to_csv(folder_calib + '/../Par_' + name + '_prior.csv')
             Ini_prior = Var_prior.sel(year=years_csv).mean('year')
             Ini_prior.astype(np.float32).to_dataframe().to_csv(folder_calib + '/../Ini_' + year_str + '_' + name + '_prior.csv')
-            Con_prior.astype(np.float32).to_dataframe().to_csv(folder_calib + '/../Con_' + name + '_prior.csv')
 
-        ## add info on constraints
-        Con_stat =[Con0,
-            xr.Dataset({var: xr.DataArray(Con0[var].attrs['is_sum'], coords={'stat':['is_sum']}, dims=['stat']) for var in Con0}), 
-            xr.Dataset({var: xr.DataArray(Con0[var].attrs['is_mean'], coords={'stat':['is_mean']}, dims=['stat']) for var in Con0}), 
-            xr.Dataset({var: xr.DataArray(Con0[var].attrs['is_diff'], coords={'stat':['is_diff']}, dims=['stat']) for var in Con0}), 
-            xr.Dataset({var: xr.DataArray(str(Con0[var].attrs['period']), coords={'stat':['period']}, dims=['stat']) for var in Con0}), 
-            xr.Dataset({var: xr.DataArray(Con0[var].attrs['units'], coords={'stat':['units']}, dims=['stat']) for var in Con0})]
-        xr.concat(Con_stat, dim='stat').drop([var for var in Con0 if var in ignore_constr]).to_dataframe().to_csv(folder_calib + '/../Con0_' + name + '.csv')
+    ## add info on constraints
+    Con_stat =[Con0,
+        xr.Dataset({var: xr.DataArray(Con0[var].attrs['is_sum'], coords={'stat':['is_sum']}, dims=['stat']) for var in Con0}), 
+        xr.Dataset({var: xr.DataArray(Con0[var].attrs['is_mean'], coords={'stat':['is_mean']}, dims=['stat']) for var in Con0}), 
+        xr.Dataset({var: xr.DataArray(Con0[var].attrs['is_diff'], coords={'stat':['is_diff']}, dims=['stat']) for var in Con0}), 
+        xr.Dataset({var: xr.DataArray(str(Con0[var].attrs['period']), coords={'stat':['period']}, dims=['stat']) for var in Con0}), 
+        xr.Dataset({var: xr.DataArray(Con0[var].attrs['units'], coords={'stat':['units']}, dims=['stat']) for var in Con0})]
+    xr.concat(Con_stat, dim='stat').drop([var for var in Con0 if var in ignore_constr]).to_dataframe().to_csv(folder_calib + '/../Con0_' + name + '.csv')
 
