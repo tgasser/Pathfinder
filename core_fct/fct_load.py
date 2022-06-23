@@ -1,5 +1,5 @@
 """
-Copyright IIASA (International Institute for Applied Systems Analysis), 2019-2021
+Copyright IIASA (International Institute for Applied Systems Analysis), 2019-2022
 Contributor(s): Thomas Gasser (gasser@iiasa.ac.at)
 
 This software is a computer program whose purpose is simulate a large number of global climate (and environmental) change scenarios.
@@ -16,6 +16,8 @@ The fact that you are presently reading this means that you have had knowledge o
 
 import io
 import csv
+import xlrd
+import zipfile
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -111,8 +113,8 @@ def load_IPCC_AR5_WG1():
     return xr.merge([Var1, Var2])
 
 
-## some data from IPCC WR5 WG1 Annex3
-## (Dentener et al., 2021; doi:???) (Table AIII.3)
+## some data from IPCC AR6 WG1 Annex3
+## (Dentener et al., 2021; doi:10.1017/9781009157896.017) (Table AIII.3)
 ## source: https://github.com/chrisroadmap/ar6/blob/main/data_input/observations/LLGHG_history_AR6_v9_for_archive.xlsx
 ## source: https://github.com/chrisroadmap/ar6/blob/main/data_output/AR6_ERF_1750-2019.csv
 def load_IPCC_AR6_WG1():
@@ -306,11 +308,95 @@ def load_gmst(ref_period=(1880, 1900), take_all=False, get_trend=False, trend_ov
 
 
 ##################################################
-##   2. LOAD CALIBRATION DATA
+##   2. LOAD SCENARIO DATA
+##################################################
+
+## RCPs (as defined for CMIP5 in concentration)
+## (Meinshausen et al., 2011; doi:10.1007/s10584-011-0156-z; http://www.pik-potsdam.de/~mmalte/rcps/)
+def load_RCPs(AR6_ERF=False):
+
+    ## properties
+    path = 'input_data/RCPs/'
+    path_ar6 = 'input_data/AR6/'
+    scen_dic = {'rcp26': 'RCP3PD', 'rcp45': 'RCP45', 'rcp60': 'RCP6', 'rcp85': 'RCP85'}
+
+    ## create empty dataset
+    Var = xr.Dataset()
+    Var.coords['year'] = np.arange(2005, 2500+1)
+    Var.coords['scen'] = np.sort(list(scen_dic.keys()))
+    for var in ['CO2', 'ERFx']:
+        Var[var] = np.nan * xr.zeros_like(Var.year, dtype=float) * xr.zeros_like(Var.scen, dtype=float)
+
+    ## get original data
+    for scen in Var.scen.values:
+        
+        ## atmospheric concentration
+        with xlrd.open_workbook(path + scen_dic[scen] + '_MIDYEAR_CONCENTRATIONS.xls') as wb:
+            sheet = wb.sheet_by_name(scen_dic[scen] + '_MIDYEAR_CONCENTRATIONS')
+        Var['CO2'].loc[{'scen': scen}] = np.array([cell.value for cell in sheet.col_slice(3, 40-1+2005-1765)])
+
+        ## radiative forcing
+        with xlrd.open_workbook(path + scen_dic[scen] + '_MIDYEAR_RADFORCING.xls') as wb:
+            sheet = wb.sheet_by_name(scen_dic[scen] + '_MIDYEAR_RADFORCING')
+        Sol = np.array([cell.value for cell in sheet.col_slice(3, 61-1+2005-1765)])
+        Ant = np.array([cell.value for cell in sheet.col_slice(4, 61-1+2005-1765)])
+        CO2 = np.array([cell.value for cell in sheet.col_slice(8, 61-1+2005-1765)])
+        Var['ERFx'].loc[{'scen': scen}] = Sol + Ant - CO2
+
+        ## get AR6 estimates of ERFx if requested
+        if AR6_ERF:
+            TMP = xr.Dataset.from_dataframe(pd.read_csv(path_ar6 + 'ERF_' + scen + '_1750-2500.csv', index_col=0).stack().to_frame()).rename({'level_1': 'forcing', 0: 'ERF'})
+            Var['ERFx'].loc[{'scen': scen}] = (TMP.ERF.sel(forcing='solar') + TMP.ERF.sel(forcing='total_anthropogenic') - TMP.ERF.sel(forcing='co2')).sel(year=Var.year)
+
+    ## return
+    return Var
+
+
+## SSPs (as defined for CMIP6 in concentration)
+## (Meinshausen et al., 2020; doi:10.5194/gmd-13-3571-2020; https://greenhousegases.science.unimelb.edu.au/)
+## (Dentener et al., 2021; doi:10.1017/9781009157896.017) (Table AIII.4 & GitHub)
+def load_SSPs():
+
+    ## properties
+    path = 'input_data/SSPs/'
+    path_ar6 = 'input_data/AR6/'
+    scen_dic = {'ssp119': 'T3 - SSP1-1.9 ', 'ssp126': 'T4 -  SSP1-2.6 ', 'ssp245': 'T5 - SSP2-4.5 ', 'ssp370': 'T6 - SSP3-7.0 ', 'ssp370-lowNTCF': 'T7 - SSP3-7.0-lowNTCF ', 
+        'ssp434': 'T8 - SSP4-3.4 ', 'ssp460': 'T9 - SSP4-6.0 ', 'ssp534-over': 'T10 - SSP5-3.4-over ', 'ssp585': 'T11 - SSP5-8.5 '}
+
+    ## create empty dataset
+    Var = xr.Dataset()
+    Var.coords['year'] = np.arange(2014, 2500+1)
+    Var.coords['scen'] = np.sort(list(scen_dic.keys()))
+    for var in ['CO2', 'ERFx']:
+        Var[var] = np.nan * xr.zeros_like(Var.year, dtype=float) * xr.zeros_like(Var.scen, dtype=float)
+
+    ## read zipped data file
+    with zipfile.ZipFile(path + 'SUPPLEMENT_DataTables_Meinshausen_6May2020.zip') as f:
+        main_file = f.read('SUPPLEMENT_DataTables_Meinshausen_6May2020.xlsx')
+    sheet = xl.load_workbook(io.BytesIO(main_file), read_only=True, data_only=True)['T2 - History Year 1750 to 2014']
+    CO2_2014 = sheet['B277'].value
+
+    ## get data
+    for scen in Var.scen.values:
+        
+        ## atmospheric concentration
+        sheet = xl.load_workbook(io.BytesIO(main_file), read_only=True, data_only=True)[scen_dic[scen]]
+        Var['CO2'].loc[{'scen': scen}] = np.append([CO2_2014], np.array([row[0].value for row in sheet['B13:B498']]))
+
+        ## radiative forcing
+        TMP = xr.Dataset.from_dataframe(pd.read_csv(path_ar6 + 'ERF_' + scen + '_1750-2500.csv', index_col=0).stack().to_frame()).rename({'level_1': 'forcing', 0: 'ERF'})
+        Var['ERFx'].loc[{'scen': scen}] = (TMP.ERF.sel(forcing='solar') + TMP.ERF.sel(forcing='total_anthropogenic') - TMP.ERF.sel(forcing='co2')).sel(year=Var.year)
+
+    ## return
+    return Var
+
+
+##################################################
+##   3. LOAD CALIBRATION DATA
 ##################################################
 
 ##=============
-## 2.1. CLIMATE
+## 3.1. CLIMATE
 ##=============
 
 ## load CMIP6 data
@@ -337,7 +423,7 @@ def load_CMIP6_climate(get_all_simu=False):
 
 
 ##==================
-## 2.2. OCEAN CARBON
+## 3.2. OCEAN CARBON
 ##==================
 
 ## load CMIP5 data as for OSCAR v2.2
@@ -427,7 +513,7 @@ def load_CMIP6_ocean(get_all_simu=False):
 
 
 ##====================
-## 2.3. LAND CARBON PI
+## 3.3. LAND CARBON PI
 ##====================
 
 ## load TRENDYv7 data as for OSCAR v3.1
@@ -472,7 +558,7 @@ def load_TRENDYv7_land():
 
 
 ##=================
-## 2.4. LAND CARBON
+## 3.4. LAND CARBON
 ##=================
 
 ## load CMIP5 data as for OSCAR v2.2

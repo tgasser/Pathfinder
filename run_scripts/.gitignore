@@ -2,3 +2,4 @@
 !.gitignore
 !run_calib_and_hist.py
 !plot_calib_check.py
+!run_diagnostics.py

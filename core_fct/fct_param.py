@@ -1,5 +1,5 @@
 """
-Copyright IIASA (International Institute for Applied Systems Analysis), 2019-2021
+Copyright IIASA (International Institute for Applied Systems Analysis), 2019-2022
 Contributor(s): Thomas Gasser (gasser@iiasa.ac.at)
 
 This software is a computer program whose purpose is simulate a large number of global climate (and environmental) change scenarios.
@@ -34,7 +34,7 @@ from core_fct.fct_load import load_CMIP6_climate, load_CMIP5_ocean, load_CMIP6_o
 ##=============
 
 ## get paramteres for distribution of ECS
-## AR6: (Forster et al., 2021; doi:???) (Executive summary)
+## AR6: (Forster et al., 2021; doi:10.1017/9781009157896.009) (Executive summary)
 ## AR5: (Collins et al., 2013; doi:10.1017/CBO9781107415324.024) (Box 12.2)
 ## AR4: (Meehl et al., 2007) (Box 10.2)
 ## AR3: (IPCC, 2001; Technical Summary) (Section F.3)
