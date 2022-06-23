@@ -33,7 +33,7 @@ def get_dflt_param(ipcc='AR6', passiveC_on=True, toc_adjust=True, calib_ecs=True
     ## INITIALISATION
     ## list of uncertain parameters
     param_unc = ['phi', 'T2x', 'THs', 'THd', 'th', 'eheat'] # climate
-    param_unc += ['aOHC', 'Llin', 'Lthx', 'Ltot1'] + (ipcc == 'AR6') * ['Ltot2'] + ['tthx', 'tice'] + ['Tlia'] # slr
+    param_unc += ['aOHC', 'Lthx', 'Lgis1', 'Lgis3', 'Ggla1', 'Ggla3', 'ggla', 'Lais_smb', 'aais'] # slr
     param_unc += (toc_adjust) * ['k_toc'] + ['vgx', 'ggx', 'To', 'bdic', 'gdic'] # ocean
     param_unc += ['npp0', 'vfire', 'vharv', 'vmort', 'vstab', 'vrh1', 'vrh2', 'bnpp', 'anpp', 'gnpp', 'bfire', 'gfire', 'brh', 'grh'] + (passiveC_on) * ['apass'] # land
     param_unc += ['ga', 'ka', 'k_tth', 'Cfr0'] # pf
@@ -41,7 +41,7 @@ def get_dflt_param(ipcc='AR6', passiveC_on=True, toc_adjust=True, calib_ecs=True
 
     ## list of fixed parameters
     param_fix = (calib_ecs) * ['T2x0'] # climate
-    param_fix = (ipcc != 'AR6') * ['Ltot2'] # slr
+    param_fix = ['tgla', 'tgis', 'tais', 'Lgla0', 'Lgis0', 'Lais0', 'Lgla', 'Lais'] # slr
     param_fix += ['adic', 'aoc_1', 'aoc_2', 'aoc_3', 'aoc_4', 'aoc_5', 'toc_1', 'toc_2', 'toc_3', 'toc_4', 'toc_5'] + (not toc_adjust) * ['k_toc'] # ocean
     param_fix += ['vrh3'] + (not passiveC_on) * ['apass'] # land
     param_fix += ['aLST', 'grt1', 'grt2', 'krt', 'amin', 'vthaw', 'vfroz', 'ath_1', 'ath_2', 'ath_3', 'tth_1', 'tth_2', 'tth_3'] # pf
@@ -93,7 +93,7 @@ def get_dflt_param(ipcc='AR6', passiveC_on=True, toc_adjust=True, calib_ecs=True
     ##==========
 
     ## fraction of energy warming up the ocean
-    ## AR6 (bg): (Forster et al., 2021; doi:???) (Table 7.1)
+    ## AR6 (bg): (Forster et al., 2021; doi:10.1017/9781009157896.011) (Table 7.1)
     ## AR6 (unc): derived from same table assuming logit-norm distribution
     ## AR5 (bg): (Rhein et al., 2013; doi:10.1017/CBO9781107415324.010) (Box 3.1)
     ## AR5 (unc): assumed
@@ -106,51 +106,65 @@ def get_dflt_param(ipcc='AR6', passiveC_on=True, toc_adjust=True, calib_ecs=True
 
 
     ## linear thermosteric SLR
-    ## AR6: (Fox-Kemper et al., 2021; doi:???) (Section 9.2.4.1)
+    ## AR6: (Fox-Kemper et al., 2021; doi:10.1017/9781009157896.011) (Section 9.2.4.1)
     ## AR5: (Kuhlbrodt & Gregory, 2012; doi:10.1029/2012GL052952) (CMIP5 value)
     if ipcc == 'AR6': 
-        Par0['Llin'][:] = np.array([113, 13]) * (3600*24*365.25) * 510.1E12 / 1E24
+        Par0['Lthx'][:] = np.array([113, 13]) * (3600*24*365.25) * 510.1E12 / 1E24
     elif ipcc == 'AR5': 
-        Par0['Llin'][:] = np.array([110, 10]) * (3600*24*365.25) * 510.1E12 / 1E24
-    Par0['Llin'].attrs['units'] = 'mm m2 W-1 yr-1'
-    Par0['Llin'].attrs['bounds'] = (0., np.inf)
+        Par0['Lthx'][:] = np.array([110, 10]) * (3600*24*365.25) * 510.1E12 / 1E24
+    Par0['Lthx'].attrs['units'] = 'mm m2 W-1 yr-1'
+    Par0['Lthx'].attrs['bounds'] = (0., np.inf)
 
 
-    ## equilibrium SLR
-    ## AR6 (bg): (Fox-Kemper et al., 2021; doi:???) (Section 9.2.4.1 and Table 9.10) (2000-yr commitment)
-    ## note: non-linear term assumed zero in all but AR6, and derived to match central values at 1.5°C and 2°C
-    ## AR6 (unc): same, but ad hoc values to roughly reproduce range
-    ## AR5 (bg): (Church et al., 2013; doi:10.1017/CBO9781107415324.026) (Figure 13.14 and Section 13.5.4.2)
-    ## AR5 (unc): assumed ranges given in text are 90%
-    if ipcc == 'AR6': 
-        Par0['Lthx'][:] = [617., 71.]
-        Par0['Ltot1'][:] = [2000/3., 500/3. / 1.645]
-        Par0['Ltot2'][:] = [2000/3., 1000/3. / 1.645]
-    elif ipcc == 'AR5': 
-        Par0['Lthx'][:] = [420., 0.5*(630-200) / 1.645]
-        Par0['Ltot1'][:] = [2300., 0.5*(3000-1000)/2300 / 1.645]
-        Par0['Ltot2'] = 0.        
-    Par0['Lthx'].attrs['units'] = Par0['Ltot1'].attrs['units'] = 'mm K-1'
-    Par0['Ltot2'].attrs['units'] = 'mm K-2'
-    Par0['Lthx'].attrs['bounds'] = Par0['Ltot1'].attrs['bounds'] = (0., np.inf)
-    if ipcc == 'AR6': Par0['Ltot2'].attrs['bounds'] = (0., np.inf)
-    
-
-    ## characteristic times for SLR
-    ## best guess: assuming 2000-yr commitment reached in about 3x characteristic time
-    ## uncertainty: arbitrary and large
-    Par0['tthx'][:] = 2000/3. * np.array([1, 0.5])
-    Par0['tice'][:] = 2000/3. * np.array([1, 0.5])
-    Par0['tthx'].attrs['units'] = Par0['tice'].attrs['units'] = 'yr'
-    Par0['tthx'].attrs['bounds'] = Par0['tice'].attrs['bounds'] = (0., np.inf)
+    ## characteristic times for ice components
+    ## (Mengel et al., 2016; doi:10.1073/pnas.1500515113) (Table S1)
+    ## note: taken as mean value derived assuming log-norm distribution and 90% range provided
+    Par0['tgla'] = 190. # +- 62 (from [98, 295])
+    Par0['tgis'] = 292. # +- 292 (from [99.7, 927])
+    Par0['tais'] = 2083. # +- 482 (from [1350, 2910])
+    Par0['tgla'].attrs['units'] = Par0['tgis'].attrs['units'] = Par0['tais'].attrs['units'] = 'yr'
 
 
-    ## temperature during little ice age
-    ## AR6 (fyi): (Gulev et al., 2021; doi:???) (Section 2.3.1.1.2)
-    ## note: taken arbitrarily but informed
-    Par0['Tlia'][:] = [-0.1, 0.1]
-    Par0['Tlia'].attrs['units'] = 'K'
-    Par0['Tlia'].attrs['bounds'] = (-np.inf, np.inf)
+    ## holocene trends in ice components
+    ## temporary?
+    Par0['Lgla0'] = 0.
+    Par0['Lgis0'] = 0.
+    Par0['Lais0'] = 0.
+    Par0['Lgla0'].attrs['units'] = Par0['Lgis0'].attrs['units'] = Par0['Lais0'].attrs['units'] = 'mm'
+
+
+    ## maximum contribution from glaciers
+    ## (Fox-Kemper et al., 2021; doi:10.1017/9781009157896.011) (Section 9.6.3.2)
+    Par0['Lgla'] = 320.
+    Par0['Lgla'].attrs['units'] = 'mm'
+
+
+    ## equilibrium sensitivity of AIS
+    ## (Church et al., 2013; doi:10.1017/CBO9781107415324.026) (Figure 13.14)
+    Par0['Lais'] = 1200.
+    Par0['Lais'].attrs['units'] = 'mm K-1'
+
+
+    ## other sensitivity parameters
+    ## already loaded from Edwards et al. (2021) models
+    ## for now hard-coded!
+    Par0['Lgis1'][:] = 10*np.array([8.33, 4.81]) #* np.sqrt((23 - 1) / (23 - 1.5))
+    Par0['Lgis3'][:] = 10*np.array([0.569, 0.140]) #* np.sqrt((23 - 1) / (23 - 1.5))
+    Par0['Ggla1'][:] = np.array([0.346, 0.131]) #* np.sqrt((7 - 1) / (7 - 1.5))
+    Par0['Ggla3'][:] = np.array([0.0224, 0.0139]) #* np.sqrt((7 - 1) / (7 - 1.5))
+    Par0['ggla'][:] = np.array([0.235, 0.180]) #* np.sqrt((7 - 1) / (7 - 1.5))
+    Par0['Lais_smb'][:] = 10*np.array([0.0609, 0.0187]) #* np.sqrt((45 - 1) / (45 - 1.5))
+    Par0['aais'][:] = 0.1*np.array([0.0215, 0.0285]) #* np.sqrt((45 - 1) / (45 - 1.5))
+
+    Par0['Lgis1'].attrs['units'] = 'mm K-1'
+    Par0['Lgis3'].attrs['units'] = 'mm K-3'
+    Par0['Ggla1'].attrs['units'] = Par0['ggla'].attrs['units'] = 'K-1'
+    Par0['Ggla3'].attrs['units'] = 'K-3'
+    Par0['Lais_smb'].attrs['units'] = 'mm yr-1 K-1'
+    Par0['aais'].attrs['units'] = 'mm-1'
+
+    Par0['Lgis1'].attrs['bounds'] = Par0['Lgis3'].attrs['bounds'] = Par0['Ggla1'].attrs['bounds'] = Par0['Ggla3'].attrs['bounds'] = Par0['Lais_smb'].attrs['bounds'] = (0., np.inf)
+    Par0['ggla'].attrs['bounds'] = Par0['aais'].attrs['bounds'] = (-np.inf, np.inf)
 
 
     ##=============
@@ -454,7 +468,7 @@ def get_dflt_constr(ipcc='AR6', corr_peat=True, corr_unch_glacier=True):
 
     ## INITIALISATION
     ## lists of constraints
-    constr_all = ['Eco2', 'd_CO2', 'Fland', 'Focean', 'Cv', 'Cs', 'NPP', 'CO2', 'ERFx', 'T', 'd_T', 'd_OHC', 'd_Hthx', 'd_Htot', 'Htot', 'logit_ff']
+    constr_all = ['Eco2', 'd_CO2', 'Fland', 'Focean', 'Cv', 'Cs', 'NPP', 'CO2', 'ERFx', 'T', 'd_T', 'd_OHC', 'd_Hthx', 'd_Hgla', 'd_Hgis', 'd_Hais', 'Htot', 'logit_ff']
 
     ## load default forcings
     For0 = get_dflt_forcing(ipcc=ipcc)
@@ -601,26 +615,35 @@ def get_dflt_constr(ipcc='AR6', corr_peat=True, corr_unch_glacier=True):
     ##===============
 
     ## speed of change, from IPCC assessments
-    ## AR6: (Fox-Kemper et al., 2021; doi:???) (Table 9.5)
-    ## SROCC: (Oppenheimer et al., 2019; doi:???) (Table 4.1)
+    ## AR6: (Fox-Kemper et al., 2021; doi:10.1017/9781009157896.011) (Table 9.5)
+    ## SROCC: (Oppenheimer et al., 2019; doi:10.1017/9781009157964.006) (Table 4.1)
     ## AR5: (Church et al., 2013; doi:10.1017/CBO9781107415324.026) (Table 13.1)
     if ipcc == 'AR6':
-        Con0.d_Htot[:] = [3.69, 0.5*(4.17-3.21) / 1.645]
+        #Con0.d_Htot[:] = [3.69, 0.5*(4.17-3.21) / 1.645]
         Con0.d_Hthx[:] = [1.39, 0.5*(2.05-0.74) / 1.645]
-        Con0.d_Htot.attrs['period'] = Con0.d_Hthx.attrs['period'] = (2006, 2018)
+        Con0.d_Hgla[:] = [0.62, 0.5*(0.68-0.57) / 1.645]
+        Con0.d_Hgis[:] = [0.63, 0.5*(0.74-0.51) / 1.645]
+        Con0.d_Hais[:] = [0.37, 0.5*(0.50-0.24) / 1.645]
+        Con0.d_Hthx.attrs['period'] = Con0.d_Hgla.attrs['period'] = Con0.d_Hgis.attrs['period'] = Con0.d_Hais.attrs['period'] = (2006, 2018)
     elif ipcc == 'SROCC':
-        Con0.d_Htot[:] = [3.58, 0.5*(4.06-3.10) / 1.645]
+        #Con0.d_Htot[:] = [3.58, 0.5*(4.06-3.10) / 1.645]
         Con0.d_Hthx[:] = [1.40, 0.5*(1.72-1.08) / 1.645]
-        Con0.d_Htot.attrs['period'] = Con0.d_Hthx.attrs['period'] = (2006, 2015)
+        Con0.d_Hgla[:] = [0.61, 0.5*(0.69-0.53) / 1.645]
+        Con0.d_Hgis[:] = [0.77, 0.5*(0.82-0.72) / 1.645] 
+        Con0.d_Hais[:] = [0.43, 0.5*(0.52-0.34) / 1.645] 
+        Con0.d_Hthx.attrs['period'] = Con0.d_Hgla.attrs['period'] = Con0.d_Hgis.attrs['period'] = Con0.d_Hais.attrs['period'] = (2006, 2015)
     elif ipcc == 'AR5':
-        Con0.d_Htot[:] = [3.2, 0.5*(3.6-2.8) / 1.645]
+        #Con0.d_Htot[:] = [3.2, 0.5*(3.6-2.8) / 1.645]
         Con0.d_Hthx[:] = [1.1, 0.5*(1.4-0.8) / 1.645]
-        Con0.d_Htot.attrs['period'] = Con0.d_Hthx.attrs['period'] = (1993, 2010)
-    Con0.d_Htot.attrs['is_mean'] = Con0.d_Hthx.attrs['is_mean'] = True
-    Con0.d_Htot.attrs['units'] = Con0.d_Hthx.attrs['units'] = 'mm yr-1'
+        Con0.d_Hgla[:] = [0.76, 0.5*(1.13-0.39) / 1.645]
+        Con0.d_Hgis[:] = [0.33, 0.5*(0.25-0.41) / 1.645]
+        Con0.d_Hais[:] = [0.27, 0.5*(0.38-0.16) / 1.645] 
+        Con0.d_Hthx.attrs['period'] = Con0.d_Hgla.attrs['period'] = Con0.d_Hgis.attrs['period'] = Con0.d_Hais.attrs['period'] = (1993, 2010)
+    Con0.d_Hthx.attrs['is_mean'] = Con0.d_Hgla.attrs['is_mean'] = Con0.d_Hgis.attrs['is_mean'] = Con0.d_Hais.attrs['is_mean'] = True
+    Con0.d_Hthx.attrs['units'] = Con0.d_Hgla.attrs['units'] = Con0.d_Hgis.attrs['units'] = Con0.d_Hais.attrs['units'] = 'mm yr-1'
 
 
-    ## sea level, from IPCC assessments (tide gauge only)
+    ## sea level, from IPCC assessments (tide gauges only)
     ## idem
     if ipcc == 'AR6':
         Con0.Htot[:] = [120.1, 0.5*(170.8-69.3) / 1.645]

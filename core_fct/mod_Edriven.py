@@ -26,7 +26,7 @@ from core_fct.cls_model import WrapModel
 
 ## prognostic variables
 Var_name = ['T', 'Td', 
-            'Hthx', 'Htot', 
+            'Hgis', 'Hgla', 'Hais_smb', 'Hais',
             'Co_1', 'Co_2', 'Co_3', 'Co_4', 'Co_5', 'Cd', 
             'Cv', 'Cs1', 'Cs2', 'Cs3', 
             'a', 'Cth_1', 'Cth_2', 'Cth_3', 
@@ -34,7 +34,7 @@ Var_name = ['T', 'Td',
 
 ## diagnostic variables (non-exhaustive)
 Var2_name = ['RFco2', 'ERF', 
-             'OHC', 'd_OHC', 'Hlin', 'd_Hlin', 'Hice', 'd_Hice',
+             'OHC', 'd_OHC', 'Hthx', 'd_Hthx', 'Htot', 'd_Htot',
              'Co', 'dic', 'pCO2', 'Focean', 
              'NPP', 'Efire', 'RH', 'Cs', 'Fland', 
              'abar', 'Epf', 'Cfr', 
@@ -42,7 +42,7 @@ Var2_name = ['RFco2', 'ERF',
 
 ## parameters
 Par_name = ['phi', 'T2x', 'THs', 'THd', 'th', 'eheat', 'T2x0',
-            'aOHC', 'Llin', 'Lthx', 'Ltot1', 'Ltot2', 'tthx', 'tice', 'Tlia',
+            'aOHC', 'Lthx', 'Lgis0', 'Lgis1', 'Lgis3', 'tgis', 'Lgla0', 'Lgla', 'Ggla1', 'Ggla3', 'tgla', 'ggla', 'Lais_smb', 'Lais0', 'Lais', 'tais', 'aais', 
             'adic', 'aoc_1', 'aoc_2', 'aoc_3', 'aoc_4', 'aoc_5', 'toc_1', 'toc_2', 'toc_3', 'toc_4', 'toc_5', 'k_toc', 'vgx', 'ggx', 'To', 'bdic', 'gdic', 
             'npp0', 'vfire', 'vharv', 'vmort', 'vstab', 'vrh1', 'vrh23', 'vrh3', 'apass', 'bnpp', 'anpp', 'gnpp', 'bfire', 'gfire', 'brh', 'grh', 
             'aLST', 'grt1', 'grt2', 'krt', 'amin', 'ka', 'ga', 'vthaw', 'vfroz', 'ath_1', 'ath_2', 'ath_3', 'tth_1', 'tth_2', 'tth_3', 'k_tth', 'Cfr0', 
@@ -60,14 +60,13 @@ def Ini_dflt(Par):
 
     ## unpack parameters
     [_, _, _, _, _, _, _,
-    _, _, _, Ltot1, Ltot2, _, _, Tlia,
+    _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, 
     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
     npp0, vfire, vharv, vmort, vstab, vrh1, vrh23, _, apass, _, _, _, _, _, _, _, 
     _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
     _, CO2pi, _] = [Par[n] for n in range(len(Par_name))]
 
     ## calculate variables
-    Htot0 = (Ltot1 + Ltot2 * Tlia) * Tlia
     Cv0 = npp0 / (vfire + vharv + vmort)
     Cl0 = Cv0 * vmort / (vrh1 + vstab)
     Cs0 = Cl0 * vstab / vrh23 * (1 - apass)
@@ -75,7 +74,7 @@ def Ini_dflt(Par):
 
     ## pack initial values
     Ini = [0, 0, 
-    0, Htot0,
+    0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 
     Cv0, Cl0, Cs0, Cp0, 
     0, 0, 0, 0,
@@ -90,7 +89,7 @@ def v_linear(Par):
 
     ## unpack parameters
     [phi, T2x, THs, THd, th, eheat, _,
-    _, _, _, _, _, tthx, tice, _,
+    _, _, _, _, _, tgis, _, _, _, _, tgla, _, _, _, _, tais, _, 
     adic, aoc_1, aoc_2, aoc_3, aoc_4, aoc_5, toc_1, toc_2, toc_3, toc_4, toc_5, k_toc, vgx, _, To, bdic, _,
     _, vfire, vharv, vmort, vstab, vrh1, vrh23, vrh3, apass, _, _, _, _, _, _, _, 
     _, _, _, _, _, _, _, vthaw, vfroz, _, _, _, tth_1, tth_2, tth_3, k_tth, _, 
@@ -99,8 +98,10 @@ def v_linear(Par):
     ## calculate linear speeds
     v_T = (phi * float(np.log(2)) / T2x + eheat * th) / THs
     v_Td = th / THd
-    v_Hthx = 1. / tthx
-    v_Hice = 1. / tice
+    v_Hgis = 1. / tgis
+    v_Hgla = 1. / tgla
+    v_Hais_smb = 1E-9
+    v_Hais = 1. / tais
     v_Co_1 = 1. / toc_1 / k_toc + aoc_1 * vgx * (1.5568 - 1.3993E-2 * To) * adic / bdic
     v_Co_2 = 1. / toc_2 / k_toc + aoc_2 * vgx * (1.5568 - 1.3993E-2 * To) * adic / bdic
     v_Co_3 = 1. / toc_3 / k_toc + aoc_3 * vgx * (1.5568 - 1.3993E-2 * To) * adic / bdic
@@ -119,7 +120,7 @@ def v_linear(Par):
 
     ## pack speeds
     v = [v_T, v_Td,
-    v_Hthx, v_Hice,
+    v_Hgis, v_Hgla, v_Hais_smb, v_Hais,
     v_Co_1, v_Co_2, v_Co_3, v_Co_4, v_Co_5, v_Cd,
     v_Cv, v_Cs1, v_Cs2, v_Cs3, 
     v_a, v_Cth_1, v_Cth_2, v_Cth_3,
@@ -137,7 +138,7 @@ def d_Var(t, Var, Par, For=None, autonomous=False, tensor=False, expost=False):
 
     ## unpack variables
     [T, Td,
-    Hthx, Htot,
+    Hgis, Hgla, Hais_smb, Hais,
     Co_1, Co_2, Co_3, Co_4, Co_5, _,
     Cv, Cs1, Cs2, Cs3, 
     a, Cth_1, Cth_2, Cth_3,
@@ -145,7 +146,7 @@ def d_Var(t, Var, Par, For=None, autonomous=False, tensor=False, expost=False):
 
     ## unpack parameters
     [phi, T2x, THs, THd, th, eheat, _,
-    aOHC, Llin, Lthx, Ltot1, Ltot2, tthx, tice, _,
+    aOHC, Lthx, Lgis0, Lgis1, Lgis3, tgis, Lgla0, Lgla, Ggla1, Ggla3, tgla, ggla, Lais_smb, Lais0, Lais, tais, aais, 
     adic, aoc_1, aoc_2, aoc_3, aoc_4, aoc_5, toc_1, toc_2, toc_3, toc_4, toc_5, k_toc, vgx, ggx, To, bdic, gdic,
     npp0, vfire, vharv, vmort, vstab, vrh1, vrh23, vrh3, apass, bnpp, anpp, gnpp, bfire, gfire, brh, grh, 
     aLST, grt1, grt2, krt, amin, ka, ga, vthaw, vfroz, ath_1, ath_2, ath_3, tth_1, tth_2, tth_3, k_tth, Cfr0,
@@ -178,14 +179,17 @@ def d_Var(t, Var, Par, For=None, autonomous=False, tensor=False, expost=False):
     ## diagnostic
     OHC = aOHC * (THs * T + THd * Td)
     d_OHC = aOHC * (THs * d_T + THd * d_Td)
-    Hlin = Llin * OHC
-    d_Hlin = Llin * d_OHC
+    Hthx = Lthx * OHC
+    d_Hthx = Lthx * d_OHC
     ## prognostic
-    d_Hthx = d_Hlin + (Hlin - Hthx + (Lthx - Llin * aOHC * (THs + THd)) * Td) / tthx
-    d_Htot = d_Hthx + (Hthx - Htot + (Ltot1 + Ltot2 * T - Lthx) * T) / tice
+    d_Hgis = (Lgis0 + Lgis1 * T + Lgis3 * T**3 - Hgis) / tgis
+    d_Hgla = (Lgla0 + Lgla * (1. - exp(-Ggla1 * T - Ggla3 * T**3)) - Hgla) / tgla * (1 + ggla * T)
+    d_Hais_smb = -Lais_smb * T
+    d_Hais = d_Hais_smb + (Lais0 + Lais * T - (Hais - Hais_smb)) / tais * (1 + aais * Hais)
     ## diagnostic 2
-    Hice = Htot - Hthx
-    d_Hice = d_Htot - d_Hthx
+    Htot = Hthx + Hgis + Hgla + Hais
+    d_Htot = d_Hthx + d_Hgis + d_Hgla + d_Hais
+
 
     ## 3. OCEAN CARBON
     ## diagnostic
@@ -256,7 +260,7 @@ def d_Var(t, Var, Par, For=None, autonomous=False, tensor=False, expost=False):
 
     ## pack derivatives
     d_Var = [d_T, d_Td,
-    d_Hthx, d_Htot,
+    d_Hgis, d_Hgla, d_Hais_smb, d_Hais,
     d_Co_1, d_Co_2, d_Co_3, d_Co_4, d_Co_5, d_Cd,
     d_Cv, d_Cs1, d_Cs2, d_Cs3, 
     d_a, d_Cth_1, d_Cth_2, d_Cth_3,
@@ -265,7 +269,7 @@ def d_Var(t, Var, Par, For=None, autonomous=False, tensor=False, expost=False):
     ## pack secondary variables
     if expost:
         Var2 = [RFco2, ERF,
-        OHC, d_OHC, Hlin, d_Hlin, Hice, d_Hice, 
+        OHC, d_OHC, Hthx, d_Hthx, Htot, d_Htot,
         Co, dic, pCO2, Focean,
         NPP, Efire, RH, Cs, Fland,
         abar, Epf, Cfr, 
