@@ -4,6 +4,7 @@ import xarray as xr
 from core_fct.fct_load import load_SSPs
 
 from core_fct.mod_Cdriven import PF_Cdriven as PF
+from core_fct.mod_OBSdriven import PF_OBSdriven as PF_obs
 from core_fct.mod_Cdriven_bgc import PF_Cdriven_bgc as PF_bgc
 from core_fct.mod_Cdriven_rad import PF_Cdriven_rad as PF_rad
 
@@ -27,6 +28,7 @@ yr_ssp = 2100
 ## load historical run from calib
 with xr.open_dataset(folder_calib + 'Par_' + name + '.nc') as TMP: Par = TMP.load()
 with xr.open_dataset(folder_calib + 'Var_' + name + '.nc') as TMP: Var = TMP.load()
+Var = xr.merge([Var, PF_obs.get_Var2(Var, Par, Var)])
 
 ## create idealized drivers
 ## time

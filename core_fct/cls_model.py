@@ -167,14 +167,18 @@ class WrapModel:
         ## get time
         assert any([time_axis in Dat for time_axis in time_axes for Dat in [Var, For]])
         for time_axis in time_axes:
-            if time_axis in Var: Dat = Var
-            elif time_axis in For: Dat = For
-            time = Dat[time_axis] 
-            time0 = Dat[time_axis][0]
-            pass
+            if time_axis in Var: 
+                time = Var[time_axis] 
+                time0 = Var[time_axis][0]
+                pass
+            elif time_axis in For:
+                time = For[time_axis] 
+                time0 = For[time_axis][0]
+                pass
 
         ## one call for all secondary variables
         Var2_out = self.d_Var(time - time0, [Var[var] for var in self.Var_name], [Par[var] for var in self.Par_name], [For[var] for var in self.For_name], autonomous=False, tensor=False, expost=True)
+        Var2_out = xr.Dataset({'d_' * (var in self.Var_name) + var: 0.*time + val for var, val in zip(self.Var2_name + self.Var_name, Var2_out)})
         Var2_out = Var2_out.astype(np.float32)
 
         ## return
