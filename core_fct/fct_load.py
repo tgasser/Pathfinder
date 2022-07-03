@@ -31,11 +31,11 @@ from scipy.stats import theilslopes
 ##################################################
 
 ## contemporary and historical CO2 budget from Global Carbon Project 
-## (Friedlingstein et al., 2020; doi:10.5194/essd-12-3269-2020; https://www.globalcarbonproject.org/carbonbudget/index.htm)
+## (Friedlingstein et al., 2022; doi:10.5194/essd-14-1917-2022; https://www.globalcarbonproject.org/carbonbudget/index.htm)
 def load_GCB():
 
     ## properties
-    path = 'input_data/GCB/Global_Carbon_Budget_2020v1.0.xlsx'
+    path = 'input_data/GCB/Global_Carbon_Budget_2021v1.0.xlsx'
     var_dic = {'fossil emissions excluding carbonation':'Eff', 'land-use change emissions':'Eluc', 'atmospheric growth':'dCatm', 'ocean sink':'Focean', 'land sink':'Fland', 'cement carbonation sink':'Fcarb', 'budget imbalance':'dCimbal'}
 
     ## contemporary
@@ -43,7 +43,7 @@ def load_GCB():
     with open(path, "rb") as f:
         sheet = xl.load_workbook(io.BytesIO(f.read()), read_only=True, data_only=True)['Global Carbon Budget']
     lgd = [[cell.value for cell in row] for row in sheet['A21:H21']][0]
-    TMP = np.array([[cell.value for cell in row] for row in sheet['A22:H82']], dtype=float)
+    TMP = np.array([[cell.value for cell in row] for row in sheet['A22:H83']], dtype=float)
 
     ## format
     var1 = xr.Dataset()
@@ -58,7 +58,7 @@ def load_GCB():
     with open(path, "rb") as f:
         sheet = xl.load_workbook(io.BytesIO(f.read()), read_only=True, data_only=True)['Historical Budget']
     lgd = [[cell.value for cell in row] for row in sheet['A16:H16']][0]
-    TMP = np.array([[cell.value for cell in row] for row in sheet['A17:H286']], dtype=float)
+    TMP = np.array([[cell.value for cell in row] for row in sheet['A17:H287']], dtype=float)
 
     ## format
     var2 = xr.Dataset()
@@ -179,27 +179,26 @@ def load_NOAA_ESRL():
     return xr.merge([var1, var2])
 
 
-## global temperature from various sources: HadCRUT5, Cowtan & Way, Berkeley Earth, GISTEMP (only from 1880), NOAA MLOST (only from 1880)
-## note: HadCRUT4 and JMA can also be loaded, but automatically discarded because of incomplete time coverage
-## (Morice et al., 2012; doi:10.1029/2011JD017187; https://www.metoffice.gov.uk/hadobs/hadcrut4/data/current/download.html)
-## (Morice et al., 2019; doi:10.1029/2019JD032361; https://www.metoffice.gov.uk/hadobs/hadcrut5/data/current/download.html)
-## (Cowtan & Way, 2014; doi:10.1002/qj.2297; http://www-users.york.ac.uk/~kdc3/papers/coverage2013/series.html)
-## (Rhodes et al., 2013a,b; doi:10.4172/gigs.1000101, doi:10.4172/gigs.1000103; http://berkeleyearth.org/data/)
-## (Hansen et al., 2010; doi:10.1029/2010RG000345; https://data.giss.nasa.gov/gistemp/)
-## (Russel et al., 2012; doi:10.1175/BAMS-D-11-00241.1; https://www.ncdc.noaa.gov/data-access/marineocean-data/noaa-global-surface-temperature-noaaglobaltemp)
-## (Japan Meteorological Agency, 2019; https://ds.data.jma.go.jp/tcc/tcc/products/gwp/gwp.html)
-def load_gmst(ref_period=(1880, 1900), take_all=False, get_trend=False, trend_over=21, make_plot=False):
+## global temperature from various sources
+## HadCRUT4: (Morice et al., 2012; doi:10.1029/2011JD017187; https://www.metoffice.gov.uk/hadobs/hadcrut4/data/current/download.html)
+## HadCRUT5: (Morice et al., 2019; doi:10.1029/2019JD032361; https://www.metoffice.gov.uk/hadobs/hadcrut5/data/current/download.html)
+## Cowtan_and_Way: (Cowtan & Way, 2014; doi:10.1002/qj.2297; http://www-users.york.ac.uk/~kdc3/papers/coverage2013/series.html)
+## Berkeley_Earth: (Rhodes et al., 2013a,b; doi:10.4172/gigs.1000101, doi:10.4172/gigs.1000103; http://berkeleyearth.org/data/)
+## GISTEMP: (Hansen et al., 2010; doi:10.1029/2010RG000345; https://data.giss.nasa.gov/gistemp/)
+## NOAAGlobalTemp: (Russel et al., 2012; doi:10.1175/BAMS-D-11-00241.1; https://www.ncei.noaa.gov/products/land-based-station/noaa-global-temp)
+## JMA: (Japan Meteorological Agency, 2019; https://ds.data.jma.go.jp/tcc/tcc/products/gwp/gwp.html)
+def load_gmst(ref_period=(1850, 1900), ignore_data=[], get_trend=False, trend_over=21, make_plot=False):
 
     ## properties
-    path_list = ['input_data/obs_T/' + path for path in ['HadCRUT.4.6.0.0.annual_ns_avg.txt', 'had4_krig_annual_v2_0_0.txt', 'Land_and_Ocean_summary.txt', 'GLB.Ts+dSST.csv', 'aravg.ann.land_ocean.90S.90N.v5.0.0.202103.asc', 'year_wld.csv']]
-    data_list = ['HadCRUT4', 'Cowtan_and_Way', 'Berkeley_Earth', 'GISTEMP', 'NOAA_MLOST', 'JMA']
+    path_list = ['input_data/obs_T/' + path for path in ['HadCRUT.4.6.0.0.annual_ns_avg.txt', 'had4_krig_annual_v2_0_0.txt', 'Land_and_Ocean_summary.txt', 'GLB.Ts+dSST.csv', 'aravg.ann.land_ocean.90S.90N.v5.0.0.202205.asc', 'year_wld.csv']]
+    data_list = ['HadCRUT4', 'Cowtan_and_Way', 'Berkeley_Earth', 'GISTEMP', 'NOAAGlobalTemp', 'JMA']
 
     ## loop on datasets
     var_out = xr.Dataset()
     for n_data in range(len(data_list)):
 
         ## load and read
-        if data_list[n_data] in ['HadCRUT4', 'NOAA_MLOST']:
+        if data_list[n_data] in ['HadCRUT4', 'NOAAGlobalTemp']:
             with open(path_list[n_data], 'r') as f:
                 TMP = np.array([line for line in csv.reader(f, delimiter=' ', skipinitialspace=True)][:-1], dtype=float)
         if data_list[n_data] in ['Cowtan_and_Way']:
@@ -227,9 +226,8 @@ def load_gmst(ref_period=(1880, 1900), take_all=False, get_trend=False, trend_ov
     TMP = TMP.drop(['realization', 'latitude', 'longitude']).assign_coords(data='HadCRUT5').expand_dims('data', -1)
     var_out = xr.merge([var_out, xr.Dataset({'T': TMP})])
 
-    ## remove dataset with lack of coverage
-    if not take_all:
-        var_out = var_out.sel(data=[data for data in var_out.data.values if data not in ['HadCRUT4', 'JMA']])
+    ## remove ignored dataset (with inadequate coverage)
+    var_out = var_out.sel(data=[data for data in var_out.data.values if data not in ignore_data])
 
     ## apply chosen reference period
     if ref_period is not None:

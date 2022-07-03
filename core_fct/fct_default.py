@@ -299,7 +299,7 @@ def get_dflt_param(redo_prior_calib=True, ipcc='AR6', passiveC_on=True, toc_adju
 
 
     ## preindustrial CO2 concentration
-    ## AR6 (bg): (Gulev et al., 2021; doi:???) (Section 2.2.3.2.1)
+    ## AR6 (bg): (Gulev et al., 2021; doi:10.1017/9781009157896.004) (Section 2.2.3.2.1)
     ## AR6 (unc): same, but taking 0-1850 period for uncertainty range
     ## AR5: (Ciais et al., 2013; doi:10.1017/CBO9781107415324.015)
     if ipcc == 'AR6':
@@ -381,7 +381,7 @@ def get_dflt_forcing(ipcc='AR6'):
     For0.CO2[:, 0] = TMP.CO2.combine_first(TMP2.CO2)
 
     ## uncertainty: ~0.1 ppm over measurement period, extrapolated backward to value assessed by IPCC
-    ## AR6: (Gulev et al., 2021; doi:???)
+    ## AR6: (Gulev et al., 2021; doi:10.1017/9781009157896.004)
     ## AR5: (Ciais et al., 2013; doi:10.1017/CBO9781107415324.015)
     if ipcc == 'AR6':
         For0.CO2[:, 1] = np.interp(For0.year.values, [1750] + list(TMP2.year.values), [2.9 / 1.645] + [0.1 for _ in TMP2.year])
@@ -415,7 +415,7 @@ def get_dflt_forcing(ipcc='AR6'):
     For0.ERFx[:len(TMP.ERF), 0] = TMP.ERF[:, 1:].sum('forcing')
 
     ## uncertainty: deduced and rounded from IPCC, volcanoes arbitrary
-    ## AR6: (Forster et al., 2021; doi:???) (Table 7.8)
+    ## AR6: (Forster et al., 2021; doi:10.1017/9781009157896.009) (Table 7.8)
     ## AR5: (Myhre et al., 2013; doi:10.1017/CBO9781107415324.018) (Tables 8.2, 8.3, 8.6, and text)
     if ipcc == 'AR6':
         unc_ipcc = {'CO2': 0.5*(2.41-1.90)/2.16, 'CH4': 0.5*(0.65-0.43)/0.54, 'N2O': 0.5*(0.24-0.18)/0.21,
@@ -441,8 +441,8 @@ def get_dflt_forcing(ipcc='AR6'):
     ## GMST
     ##=====
 
-    ## best guess: average of all available GMST datasets, with compatible reference period
-    TMP = load_gmst(ref_period=[1880, 1900])
+    ## best guess: average of all GMST datasets (HadCRUT4: limited coverage; Cowtan_and_Way: not updated to 2021)
+    TMP = load_gmst(ref_period=[1850, 1900], ignore_data=['HadCRUT4', 'Cowtan_and_Way'])
     For0.T[1850-1750:, 0] = TMP.T.mean('data')
 
     ## uncertainty: debiased standard deviation between same datasets
@@ -494,17 +494,17 @@ def get_dflt_constr(ipcc='AR6', corr_peat=True, corr_unch_glacier=True):
     ## average fluxes over latest decade
     ## (Friedlingstein et al., 2020; doi:10.5194/essd-12-3269-2020) (Table 6)
     ## note: added FOS and LUC together
-    Con0.Eco2[:] = [9.4 + 1.6, np.sqrt(0.5**2 + 0.7**2)]
+    Con0.Eco2[:] = [9.5 + 1.1, np.sqrt(0.5**2 + 0.7**2)]
     Con0.d_CO2[:] = np.array([5.1, 0.02]) / 2.124
-    Con0.Eco2.attrs['period'] = Con0.d_CO2.attrs['period'] = (2010, 2019)
+    Con0.Eco2.attrs['period'] = Con0.d_CO2.attrs['period'] = (2011, 2020)
     Con0.Eco2.attrs['is_mean'] = Con0.d_CO2.attrs['is_mean'] = True
     
     ## cumulative fluxes
     ## (Friedlingstein et al., 2020; doi:10.5194/essd-12-3269-2020) (Table 8)
     ## note: LASC is excluded here...
-    Con0.Focean[:] = [105, 20]
-    Con0.Fland[:] = [145, 35]
-    Con0.Focean.attrs['period'] = Con0.Fland.attrs['period'] = (1959, 2019)
+    Con0.Focean[:] = [115, 25]
+    Con0.Fland[:] = [135, 25]
+    Con0.Focean.attrs['period'] = Con0.Fland.attrs['period'] = (1960, 2020)
     Con0.Focean.attrs['is_sum'] = Con0.Fland.attrs['is_sum'] = True
     
     ## units
@@ -519,7 +519,7 @@ def get_dflt_constr(ipcc='AR6', corr_peat=True, corr_unch_glacier=True):
     ##=============
 
     ## preindustrial land carbon pools, subtracting peatland for soils
-    ## AR6 (bg): (Canadell et al., 2021; doi:???) (Figure 5.12)
+    ## AR6 (bg): (Canadell et al., 2021; doi:10.1017/9781009157896.007) (Figure 5.12)
     ## AR6 (unc): assumed same relative uncertainty as AR5
     ## AR5: (Ciais et al., 2013; doi:10.1017/CBO9781107415324.015) (Figure 6.1)
     if ipcc == 'AR6':
@@ -579,7 +579,7 @@ def get_dflt_constr(ipcc='AR6', corr_peat=True, corr_unch_glacier=True):
     ## GMST
     ##=====
     
-    ## average value: from our 5 GMST datasets, over latest two decades
+    ## average value: from our GMST datasets, over latest two decades
     TMP = load_gmst().dropna('year')
     TMP2 = TMP.T[-20:].mean('year')
     Con0.T[:] = [np.mean(TMP2), np.std(TMP2) * np.sqrt((len(TMP.data) - 1.) / (len(TMP.data) - 1.5))]
@@ -601,7 +601,7 @@ def get_dflt_constr(ipcc='AR6', corr_peat=True, corr_unch_glacier=True):
     ##==================
 
     ## from IPCC assessments
-    ## AR6: (Gulev et al., 2021; doi:???) (Table 2.7)
+    ## AR6: (Gulev et al., 2021; doi:10.1017/9781009157896.004) (Table 2.7)
     ## AR5: (Rhein et al., 2013; doi:10.1017/CBO9781107415324.010) (Box 3.1)
     ## note: converted from ZJ yr-1 to W m-2
     if ipcc == 'AR6':
