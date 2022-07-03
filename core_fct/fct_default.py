@@ -18,7 +18,7 @@ import numpy as np
 import xarray as xr
 
 from core_fct.fct_load import load_GCB, load_IPCC_AR5_WG1, load_IPCC_AR6_WG1, load_NOAA_ESRL, load_gmst
-from core_fct.fct_param import get_param_clim, get_param_ocean, get_param_landPI, get_param_land, get_ecs_distrib
+from core_fct.fct_param import get_ecs_distrib, get_param_clim, get_param_ocean, get_param_landPI, get_param_land, get_param_slr
 
 
 ##################################################
@@ -27,13 +27,13 @@ from core_fct.fct_param import get_param_clim, get_param_ocean, get_param_landPI
 
 ## get default parameters
 ## (a lot of hard-coded stuff)
-def get_dflt_param(ipcc='AR6', passiveC_on=True, toc_adjust=True, calib_ecs=True):
+def get_dflt_param(redo_prior_calib=True, ipcc='AR6', passiveC_on=True, toc_adjust=True, calib_ecs=True):
     assert ipcc in ['AR6', 'AR5']
 
     ## INITIALISATION
     ## list of uncertain parameters
     param_unc = ['phi', 'T2x', 'THs', 'THd', 'th', 'eheat'] # climate
-    param_unc += ['aOHC', 'Lthx', 'Lgis1', 'Lgis3', 'Ggla1', 'Ggla3', 'ggla', 'Lais_smb', 'aais'] # slr
+    param_unc += ['aOHC', 'Lthx', 'Lgis1', 'Lgis3', 'Ggla1', 'Ggla3', 'ggla', 'Lais_smb', 'aais'] + ['lgla0', 'lgis0', 'lais0']# slr
     param_unc += (toc_adjust) * ['k_toc'] + ['vgx', 'ggx', 'To', 'bdic', 'gdic'] # ocean
     param_unc += ['npp0', 'vfire', 'vharv', 'vmort', 'vstab', 'vrh1', 'vrh2', 'bnpp', 'anpp', 'gnpp', 'bfire', 'gfire', 'brh', 'grh'] + (passiveC_on) * ['apass'] # land
     param_unc += ['ga', 'ka', 'k_tth', 'Cfr0'] # pf
@@ -41,7 +41,7 @@ def get_dflt_param(ipcc='AR6', passiveC_on=True, toc_adjust=True, calib_ecs=True
 
     ## list of fixed parameters
     param_fix = (calib_ecs) * ['T2x0'] # climate
-    param_fix = ['tgla', 'tgis', 'tais', 'Lgla0', 'Lgis0', 'Lais0', 'Lgla', 'Lais'] # slr
+    param_fix = ['Lgla', 'Lais'] + [] + ['tgla', 'tgis', 'tais']  # slr
     param_fix += ['adic', 'aoc_1', 'aoc_2', 'aoc_3', 'aoc_4', 'aoc_5', 'toc_1', 'toc_2', 'toc_3', 'toc_4', 'toc_5'] + (not toc_adjust) * ['k_toc'] # ocean
     param_fix += ['vrh3'] + (not passiveC_on) * ['apass'] # land
     param_fix += ['aLST', 'grt1', 'grt2', 'krt', 'amin', 'vthaw', 'vfroz', 'ath_1', 'ath_2', 'ath_3', 'tth_1', 'tth_2', 'tth_3'] # pf
@@ -118,24 +118,27 @@ def get_dflt_param(ipcc='AR6', passiveC_on=True, toc_adjust=True, calib_ecs=True
 
     ## characteristic times for ice components
     ## (Mengel et al., 2016; doi:10.1073/pnas.1500515113) (Table S1)
-    ## note: taken as mean value derived assuming log-norm distribution and 90% range provided
-    Par0['tgla'] = 190. # +- 62 (from [98, 295])
-    Par0['tgis'] = 292. # +- 292 (from [99.7, 927])
-    Par0['tais'] = 2083. # +- 482 (from [1350, 2910])
+    ## note: derived assuming log-norm distribution and 90% range provided
+    Par0['tgla'] = 190. # [190., 62.] # from (98, 295)
+    Par0['tgis'] = 481. # [481., 292.] # from (99.7, 927)
+    Par0['tais'] = 2093. # [2093., 482.] # from (1350, 2910)
     Par0['tgla'].attrs['units'] = Par0['tgis'].attrs['units'] = Par0['tais'].attrs['units'] = 'yr'
+    #Par0['tgla'].attrs['bounds'] = Par0['tgis'].attrs['bounds'] = Par0['tais'].attrs['bounds'] = (0., np.inf)
 
 
     ## holocene trends in ice components
-    ## temporary?
-    Par0['Lgla0'] = 0.
-    Par0['Lgis0'] = 0.
-    Par0['Lais0'] = 0.
-    Par0['Lgla0'].attrs['units'] = Par0['Lgis0'].attrs['units'] = Par0['Lais0'].attrs['units'] = 'mm'
+    ## (Fox-Kemper et al., 2021; doi:10.1017/9781009157896.011) (Table 9.5)
+    ## note: taken as earliest period available; likely overestimated but range increased (from 90% to 1-sigma)
+    Par0['lgla0'][:] = [0.58, 0.5*(0.82-0.34)]
+    Par0['lgis0'][:] = [0.33, 0.5*(0.47-0.18)]
+    Par0['lais0'][:] = [0.00, 0.5*(0.11+0.10)]
+    Par0['lgla0'].attrs['units'] = Par0['lgis0'].attrs['units'] = Par0['lais0'].attrs['units'] = 'mm'
+    Par0['lgla0'].attrs['bounds'] = Par0['lgis0'].attrs['bounds'] = Par0['lais0'].attrs['bounds'] = (-np.inf, np.inf)
 
 
     ## maximum contribution from glaciers
-    ## (Fox-Kemper et al., 2021; doi:10.1017/9781009157896.011) (Section 9.6.3.2)
-    Par0['Lgla'] = 320.
+    ## (Fox-Kemper et al., 2021; doi:10.1017/9781009157896.011) (Section 9.6.3.2 & Table 9.5)
+    Par0['Lgla'] = 320. + np.round(67.2 - 7.5)
     Par0['Lgla'].attrs['units'] = 'mm'
 
 
@@ -145,26 +148,19 @@ def get_dflt_param(ipcc='AR6', passiveC_on=True, toc_adjust=True, calib_ecs=True
     Par0['Lais'].attrs['units'] = 'mm K-1'
 
 
-    ## other sensitivity parameters
-    ## already loaded from Edwards et al. (2021) models
-    ## for now hard-coded!
-    Par0['Lgis1'][:] = 10*np.array([8.33, 4.81]) #* np.sqrt((23 - 1) / (23 - 1.5))
-    Par0['Lgis3'][:] = 10*np.array([0.569, 0.140]) #* np.sqrt((23 - 1) / (23 - 1.5))
-    Par0['Ggla1'][:] = np.array([0.346, 0.131]) #* np.sqrt((7 - 1) / (7 - 1.5))
-    Par0['Ggla3'][:] = np.array([0.0224, 0.0139]) #* np.sqrt((7 - 1) / (7 - 1.5))
-    Par0['ggla'][:] = np.array([0.235, 0.180]) #* np.sqrt((7 - 1) / (7 - 1.5))
-    Par0['Lais_smb'][:] = 10*np.array([0.0609, 0.0187]) #* np.sqrt((45 - 1) / (45 - 1.5))
-    Par0['aais'][:] = 0.1*np.array([0.0215, 0.0285]) #* np.sqrt((45 - 1) / (45 - 1.5))
-
-    Par0['Lgis1'].attrs['units'] = 'mm K-1'
-    Par0['Lgis3'].attrs['units'] = 'mm K-3'
-    Par0['Ggla1'].attrs['units'] = Par0['ggla'].attrs['units'] = 'K-1'
-    Par0['Ggla3'].attrs['units'] = 'K-3'
-    Par0['Lais_smb'].attrs['units'] = 'mm yr-1 K-1'
-    Par0['aais'].attrs['units'] = 'mm-1'
-
-    Par0['Lgis1'].attrs['bounds'] = Par0['Lgis3'].attrs['bounds'] = Par0['Ggla1'].attrs['bounds'] = Par0['Ggla3'].attrs['bounds'] = Par0['Lais_smb'].attrs['bounds'] = (0., np.inf)
-    Par0['ggla'].attrs['bounds'] = Par0['aais'].attrs['bounds'] = (-np.inf, np.inf)
+    ## SLR sensitivity parameters
+    ## load from Edwards et al. models
+    if redo_prior_calib:
+        print('recalibrating SLR')
+        Par_tmp = get_param_slr(fixed_param={var: Par0[var] if Par0[var].size==1 else Par0[var][0] for var in ['tgla', 'tgis', 'tais', 'Lgla', 'Lais']})
+    else:
+        with xr.open_dataset('internal_data/prior_calib/param_slr.nc') as TMP: Par_tmp = TMP.load()
+    ## take mean and unbiased std
+    for var in ['Ggla1', 'Ggla3', 'ggla', 'Lgis1', 'Lgis3', 'Lais_smb', 'aais']:
+        Par0[var][:] = [Par_tmp[var].mean(), Par_tmp[var].std() * np.sqrt((len(Par_tmp[var]) - 1.) / ((len(Par_tmp[var]) - 1.5)))]
+        Par0[var].attrs['units'] = Par_tmp[var].units
+    Par0['Ggla1'].attrs['bounds'] = Par0['aais'].attrs['bounds'] = (-np.inf, np.inf)
+    Par0['Ggla3'].attrs['bounds'] = Par0['ggla'].attrs['bounds'] = Par0['Lgis1'].attrs['bounds'] = Par0['Lgis3'].attrs['bounds'] = Par0['Lais_smb'].attrs['bounds'] = (0., np.inf)
 
 
     ##=============
@@ -174,7 +170,11 @@ def get_dflt_param(ipcc='AR6', passiveC_on=True, toc_adjust=True, calib_ecs=True
     ## ocean carbon structural parameters
     ## (Strassmann et al., 2018; doi:10.5194/gmd-11-1887-2018) (Tables A2 and A3; Princeton preferred as more stable without solver)
     ## load
-    Par_tmp = get_param_ocean(struct='Princeton', data='CMIP6' * (ipcc=='AR6') + 'CMIP5' * (ipcc=='AR5'))
+    if redo_prior_calib:
+        print('recalibrating ocean C')
+        Par_tmp = get_param_ocean(struct='Princeton', data='CMIP6' * (ipcc=='AR6') + 'CMIP5' * (ipcc=='AR5'))
+    else:
+        with xr.open_dataset('internal_data/prior_calib/param_ocean.nc') as TMP: Par_tmp = TMP.load()
     ## assign
     for var in ['adic', 'aoc_1', 'aoc_2', 'aoc_3', 'aoc_4', 'aoc_5', 'toc_1', 'toc_2', 'toc_3', 'toc_4', 'toc_5']:
         Par0[var] = Par_tmp[var]
@@ -232,7 +232,11 @@ def get_dflt_param(ipcc='AR6', passiveC_on=True, toc_adjust=True, calib_ecs=True
 
     ## land sensitivity parameters
     ## load from CMIP models
-    Par_tmp = get_param_land(log_npp=False, data='CMIP6' * (ipcc=='AR6') + 'CMIP5' * (ipcc=='AR5'))
+    if redo_prior_calib:
+        print('recalibrating land C')
+        Par_tmp = get_param_land(log_npp=False, data='CMIP6' * (ipcc=='AR6') + 'CMIP5' * (ipcc=='AR5'))
+    else:
+        with xr.open_dataset('internal_data/prior_calib/param_land.nc') as TMP: Par_tmp = TMP.load()
     ## take mean and unbiased std
     for var in ['bnpp', 'anpp', 'gnpp', 'bfire', 'gfire', 'brh', 'grh']:
         Par0[var][:] = [Par_tmp[var].mean(), Par_tmp[var].std() * np.sqrt((len(Par_tmp[var]) - 1.) / ((len(Par_tmp[var]) - 1.5)))]
@@ -468,7 +472,7 @@ def get_dflt_constr(ipcc='AR6', corr_peat=True, corr_unch_glacier=True):
 
     ## INITIALISATION
     ## lists of constraints
-    constr_all = ['Eco2', 'd_CO2', 'Fland', 'Focean', 'Cv', 'Cs', 'NPP', 'CO2', 'ERFx', 'T', 'd_T', 'd_OHC', 'd_Hthx', 'd_Hgla', 'd_Hgis', 'd_Hais', 'Htot', 'logit_ff']
+    constr_all = ['Eco2', 'd_CO2', 'Fland', 'Focean', 'Cv', 'Cs', 'NPP', 'CO2', 'ERFx', 'T', 'd_T', 'd_OHC', 'd_Hthx', 'd_Hgla', 'd_Hgis', 'd_Hais', 'Htot', 'Hlia', 'logit_ff']
 
     ## load default forcings
     For0 = get_dflt_forcing(ipcc=ipcc)
@@ -656,11 +660,19 @@ def get_dflt_constr(ipcc='AR6', corr_peat=True, corr_unch_glacier=True):
     Con0.Htot.attrs['units'] = 'mm'
 
 
-    ## correction for uncharted/ glaciers
+    ## correction for uncharted glaciers
     ## (Parkes and Marzeion, 2018; doi: 10.1038/s41586-018-0687-9)
     if corr_unch_glacier:
         Con0.Htot[0] = Con0.Htot[0] - 0.5*(0.17+0.53) * (1990-1901)
         Con0.Htot[1] = np.sqrt(Con0.Htot[1]**2 + (0.5*(0.53-0.17) * (1990-1901) / 1.645)**2)
+
+
+    ## sea level rise from relaxation after LIA
+    ## (Slangen et al., 2016; doi:10.1038/nclimate2991)
+    Con0.Hlia[:] = [30., 13.]
+    Con0.Hlia.attrs['period'] = (1750, 1750)
+    Con0.Hlia.attrs['is_mean'] = True
+    Con0.Hlia.attrs['units'] = 'mm'
 
 
     ##====================

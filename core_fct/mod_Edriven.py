@@ -26,7 +26,7 @@ from core_fct.cls_model import WrapModel
 
 ## prognostic variables
 Var_name = ['T', 'Td', 
-            'Hgis', 'Hgla', 'Hais_smb', 'Hais',
+            'Hgla', 'Hgis', 'Hais_smb', 'Hais',
             'Co_1', 'Co_2', 'Co_3', 'Co_4', 'Co_5', 'Cd', 
             'Cv', 'Cs1', 'Cs2', 'Cs3', 
             'a', 'Cth_1', 'Cth_2', 'Cth_3', 
@@ -42,7 +42,7 @@ Var2_name = ['RFco2', 'ERF',
 
 ## parameters
 Par_name = ['phi', 'T2x', 'THs', 'THd', 'th', 'eheat', 'T2x0',
-            'aOHC', 'Lthx', 'Lgis0', 'Lgis1', 'Lgis3', 'tgis', 'Lgla0', 'Lgla', 'Ggla1', 'Ggla3', 'tgla', 'ggla', 'Lais_smb', 'Lais0', 'Lais', 'tais', 'aais', 
+            'aOHC', 'Lthx', 'lgla0', 'Lgla', 'Ggla1', 'Ggla3', 'tgla', 'ggla', 'lgis0', 'Lgis1', 'Lgis3', 'tgis', 'Lais_smb', 'lais0', 'Lais', 'tais', 'aais', 
             'adic', 'aoc_1', 'aoc_2', 'aoc_3', 'aoc_4', 'aoc_5', 'toc_1', 'toc_2', 'toc_3', 'toc_4', 'toc_5', 'k_toc', 'vgx', 'ggx', 'To', 'bdic', 'gdic', 
             'npp0', 'vfire', 'vharv', 'vmort', 'vstab', 'vrh1', 'vrh23', 'vrh3', 'apass', 'bnpp', 'anpp', 'gnpp', 'bfire', 'gfire', 'brh', 'grh', 
             'aLST', 'grt1', 'grt2', 'krt', 'amin', 'ka', 'ga', 'vthaw', 'vfroz', 'ath_1', 'ath_2', 'ath_3', 'tth_1', 'tth_2', 'tth_3', 'k_tth', 'Cfr0', 
@@ -89,7 +89,7 @@ def v_linear(Par):
 
     ## unpack parameters
     [phi, T2x, THs, THd, th, eheat, _,
-    _, _, _, _, _, tgis, _, _, _, _, tgla, _, _, _, _, tais, _, 
+    _, _, _, _, _, _, tgla, _, _, _, _, tgis, _, _, _, tais, _, 
     adic, aoc_1, aoc_2, aoc_3, aoc_4, aoc_5, toc_1, toc_2, toc_3, toc_4, toc_5, k_toc, vgx, _, To, bdic, _,
     _, vfire, vharv, vmort, vstab, vrh1, vrh23, vrh3, apass, _, _, _, _, _, _, _, 
     _, _, _, _, _, _, _, vthaw, vfroz, _, _, _, tth_1, tth_2, tth_3, k_tth, _, 
@@ -98,8 +98,8 @@ def v_linear(Par):
     ## calculate linear speeds
     v_T = (phi * float(np.log(2)) / T2x + eheat * th) / THs
     v_Td = th / THd
-    v_Hgis = 1. / tgis
     v_Hgla = 1. / tgla
+    v_Hgis = 1. / tgis
     v_Hais_smb = 1E-9
     v_Hais = 1. / tais
     v_Co_1 = 1. / toc_1 / k_toc + aoc_1 * vgx * (1.5568 - 1.3993E-2 * To) * adic / bdic
@@ -120,7 +120,7 @@ def v_linear(Par):
 
     ## pack speeds
     v = [v_T, v_Td,
-    v_Hgis, v_Hgla, v_Hais_smb, v_Hais,
+    v_Hgla, v_Hgis, v_Hais_smb, v_Hais,
     v_Co_1, v_Co_2, v_Co_3, v_Co_4, v_Co_5, v_Cd,
     v_Cv, v_Cs1, v_Cs2, v_Cs3, 
     v_a, v_Cth_1, v_Cth_2, v_Cth_3,
@@ -138,7 +138,7 @@ def d_Var(t, Var, Par, For=None, autonomous=False, tensor=False, expost=False):
 
     ## unpack variables
     [T, Td,
-    Hgis, Hgla, Hais_smb, Hais,
+    Hgla, Hgis, Hais_smb, Hais,
     Co_1, Co_2, Co_3, Co_4, Co_5, _,
     Cv, Cs1, Cs2, Cs3, 
     a, Cth_1, Cth_2, Cth_3,
@@ -146,7 +146,7 @@ def d_Var(t, Var, Par, For=None, autonomous=False, tensor=False, expost=False):
 
     ## unpack parameters
     [phi, T2x, THs, THd, th, eheat, _,
-    aOHC, Lthx, Lgis0, Lgis1, Lgis3, tgis, Lgla0, Lgla, Ggla1, Ggla3, tgla, ggla, Lais_smb, Lais0, Lais, tais, aais, 
+    aOHC, Lthx, lgla0, Lgla, Ggla1, Ggla3, tgla, ggla, lgis0, Lgis1, Lgis3, tgis, Lais_smb, lais0, Lais, tais, aais, 
     adic, aoc_1, aoc_2, aoc_3, aoc_4, aoc_5, toc_1, toc_2, toc_3, toc_4, toc_5, k_toc, vgx, ggx, To, bdic, gdic,
     npp0, vfire, vharv, vmort, vstab, vrh1, vrh23, vrh3, apass, bnpp, anpp, gnpp, bfire, gfire, brh, grh, 
     aLST, grt1, grt2, krt, amin, ka, ga, vthaw, vfroz, ath_1, ath_2, ath_3, tth_1, tth_2, tth_3, k_tth, Cfr0,
@@ -182,13 +182,13 @@ def d_Var(t, Var, Par, For=None, autonomous=False, tensor=False, expost=False):
     Hthx = Lthx * OHC
     d_Hthx = Lthx * d_OHC
     ## prognostic
-    d_Hgis = (Lgis0 + Lgis1 * T + Lgis3 * T**3 - Hgis) / tgis
-    d_Hgla = (Lgla0 + Lgla * (1. - exp(-Ggla1 * T - Ggla3 * T**3)) - Hgla) / tgla * (1 + ggla * T)
+    d_Hgla = lgla0 + (Lgla * (1. - exp(-Ggla1 * T - Ggla3 * T**3)) - Hgla) / tgla * exp(ggla * T)
+    d_Hgis = lgis0 + (Lgis1 * T + Lgis3 * T**3 - Hgis) / tgis
     d_Hais_smb = -Lais_smb * T
-    d_Hais = d_Hais_smb + (Lais0 + Lais * T - (Hais - Hais_smb)) / tais * (1 + aais * Hais)
+    d_Hais = d_Hais_smb + lais0 + (Lais * T - (Hais - Hais_smb)) / tais * (1 + aais * (Hais - Hais_smb))
     ## diagnostic 2
-    Htot = Hthx + Hgis + Hgla + Hais
-    d_Htot = d_Hthx + d_Hgis + d_Hgla + d_Hais
+    Htot = Hthx + Hgla + Hgis + Hais
+    d_Htot = d_Hthx + d_Hgla + d_Hgis + d_Hais
 
 
     ## 3. OCEAN CARBON
@@ -260,7 +260,7 @@ def d_Var(t, Var, Par, For=None, autonomous=False, tensor=False, expost=False):
 
     ## pack derivatives
     d_Var = [d_T, d_Td,
-    d_Hgis, d_Hgla, d_Hais_smb, d_Hais,
+    d_Hgla, d_Hgis, d_Hais_smb, d_Hais,
     d_Co_1, d_Co_2, d_Co_3, d_Co_4, d_Co_5, d_Cd,
     d_Cv, d_Cs1, d_Cs2, d_Cs3, 
     d_a, d_Cth_1, d_Cth_2, d_Cth_3,

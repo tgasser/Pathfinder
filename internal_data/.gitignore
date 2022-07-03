@@ -1,3 +1,4 @@
 *
 !.gitignore
+!prior_calib/
 !pyMC_calib/

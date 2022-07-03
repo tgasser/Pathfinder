@@ -108,7 +108,7 @@ scen_ref = ['ssp119', 'ssp126', 'ssp245', 'ssp370', 'ssp585']
 print_sym0 = lambda da: '{:.0f} +- {:.0f}'.format(da.mean().values, da.std().values)
 print_sym1 = lambda da: '{:.1f} +- {:.1f}'.format(da.mean().values, da.std().values)
 print_sym2 = lambda da: '{:.2f} +- {:.2f}'.format(da.mean().values, da.std().values)
-print_asym1 = lambda da: '{:.0f} ({:.0f}, {:.0f})'.format(da.median().values, da.quantile(0.17).values, da.quantile(0.83).values)
+print_asym0 = lambda da: '{:.0f} ({:.0f}, {:.0f})'.format(da.median().values, da.quantile(0.17).values, da.quantile(0.83).values)
 print_asym1 = lambda da: '{:.1f} ({:.1f}, {:.1f})'.format(da.median().values, da.quantile(0.17).values, da.quantile(0.83).values)
 print_asym2 = lambda da: '{:.2f} ({:.2f}, {:.2f})'.format(da.median().values, da.quantile(0.17).values, da.quantile(0.83).values)
 

@@ -648,3 +648,22 @@ def load_CMIP6_land(get_all_simu=False):
     ## return
     return var_out
 
+
+##====================
+## 3.3. SEA LEVEL RISE
+##====================
+
+## load Edwards et al. (2021) data
+def load_Edwards_2021_slr(ice):
+
+    ## load preprocessed data
+    with xr.open_dataset('input_data/Edwards_2021/slr-'+ice+'_Edwards_2021_for_PathFinder.nc') as TMP:
+        var_out = TMP.load()
+
+    ## set to correct units for calibration
+    var_out['slr'] *= 10
+    var_out['slr'].attrs['units'] =  'mm'
+
+    ## return
+    return var_out
+    

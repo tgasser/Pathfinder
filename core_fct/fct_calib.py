@@ -51,22 +51,16 @@ def imex_4steps(F, X, p, v):
 ## MAIN CALIBRATION FUNCTIONS
 ##################################################
 
-## function to get default parameters, drivers and constraints
-def get_dflt_input(Par0=None, For0=None, Con0=None):
-    if Par0 is None: Par0 = get_dflt_param()
-    if For0 is None: For0 = get_dflt_forcing()
-    if Con0 is None: Con0 = get_dflt_constr()
-    return Par0, For0, Con0
-
-
 ## function returning pyMC3 model 
 ## note: quite a bunch of options are hard-coded in there
-def build_model(Par0=None, For0=None, Con0=None, std_max=4, ignore_constr=[], uniform_prior=False, with_noise=True, f_scheme=imex_4steps):
+def build_model(redo_prior_calib=True, std_max=5, ignore_constr=[], uniform_prior=False, with_noise=True, f_scheme=imex_4steps):
 
     ## load parameters, drivers and constraints
     t_counter = perf_counter()
     print('** loading inputs **')
-    Par0, For0, Con0 = get_dflt_input(Par0, For0, Con0)
+    Par0 = get_dflt_param(redo_prior_calib=redo_prior_calib)
+    For0 = get_dflt_forcing()
+    Con0 = get_dflt_constr()
     print('(done in {0:.0f} seconds)'.format(perf_counter() - t_counter))
 
     ## define model
@@ -125,11 +119,10 @@ def build_model(Par0=None, For0=None, Con0=None, std_max=4, ignore_constr=[], un
         T_std = tt.as_tensor_variable(For0.T.sel(stat='std').values)
         if with_noise:
             if uniform_prior:
-                corr_T = pm.Uniform('corr_T', lower=0, upper=1)
-                ampl_T = pm.Uniform('ampl_T', lower=0, upper=std_max*0.02)
+                ampl_T = pm.Uniform('ampl_T', lower=0, upper=std_max*0.05)
             else:
-                corr_T = pm.LogitNormal('corr_T', mu=5, sigma=1)
-                ampl_T = pm.Bound(pm.HalfNormal, lower=0, upper=std_max*0.02)('ampl_T', sigma=0.02)
+                ampl_T = pm.Bound(pm.HalfNormal, lower=0, upper=std_max*0.05)('ampl_T', sigma=0.05)
+            corr_T = pm.Uniform('corr_T', lower=0, upper=1)
             ar_T = my_AR1('ar_T', k=corr_T, shape=n_year)
         else:
             ar_T, ampl_T = 0., 0.
@@ -140,11 +133,10 @@ def build_model(Par0=None, For0=None, Con0=None, std_max=4, ignore_constr=[], un
         CO2_std = tt.as_tensor_variable(For0.CO2.sel(stat='std').values)
         if with_noise:
             if uniform_prior:
-                corr_CO2 = pm.Uniform('corr_CO2', lower=0, upper=1)
                 ampl_CO2 = pm.Uniform('ampl_CO2', lower=0, upper=std_max*0.5)
             else:
-                corr_CO2 = pm.LogitNormal('corr_CO2', mu=5, sigma=1)
                 ampl_CO2 = pm.Bound(pm.HalfNormal, lower=0, upper=std_max*0.5)('ampl_CO2', sigma=0.5)
+            corr_CO2 = pm.Uniform('corr_CO2', lower=0, upper=1)
             ar_CO2 = my_AR1('ar_CO2', k=corr_CO2, shape=n_year)
         else:
             ar_CO2, ampl_CO2 = 0., 0.
@@ -216,8 +208,9 @@ def build_model(Par0=None, For0=None, Con0=None, std_max=4, ignore_constr=[], un
 
 ## function to execute Bayesian calibration
 ## note: most options are hard-coded
-def exec_calib(folder_out='internal_data/pyMC_calib/', method='FullRankADVI', name=None, n_sample=2000, **model_args):
-    
+def exec_calib(method='FullRankADVI', name=None, n_sample=2000, **model_args):
+    folder_out = 'internal_data/pyMC_calib/'
+
     ## get model
     model = build_model(**model_args)
 
@@ -290,7 +283,7 @@ def post_calib(folder_calib, name=None, save_prior=False, save_Var2=False, write
     ##==========
 
     ## load default
-    Par0 = get_dflt_param()
+    Par0 = get_dflt_param(redo_prior_calib=model_args['redo_prior_calib'] if 'redo_prior_calib' in model_args else True)
     For0 = get_dflt_forcing()
     Con0 = get_dflt_constr()
 

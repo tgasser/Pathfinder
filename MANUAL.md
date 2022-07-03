@@ -17,10 +17,13 @@
 | <img src="https://latex.codecogs.com/gif.latex?\mathrm{logit} (\mathrm{ff})" /> | `logit_ff` | Logit of the climate feedback factor (for calib.) | 1 |||
 |||||||
 | <img src="https://latex.codecogs.com/gif.latex?U_\mathrm{ohc}" /> | `OHC` | Ocean heat content (anomaly) | W yr m<sup>-2</sup> |||
-| <img src="https://latex.codecogs.com/gif.latex?H_\mathrm{lin}" /> | `Hlin` | Linear part of thermosteric sea level rise | mm |||
-| <img src="https://latex.codecogs.com/gif.latex?H_\mathrm{thx}" /> | `Hthx` | Total thermosteric sea level rise | mm | *yes* ||
-| <img src="https://latex.codecogs.com/gif.latex?H_\mathrm{ice}" /> | `Hice` | Ice contributions to sea level rise | mm |||
-| <img src="https://latex.codecogs.com/gif.latex?H_\mathrm{tot}" /> | `Htot` | Total sea level rise | mm | *yes* ||
+| <img src="https://latex.codecogs.com/gif.latex?H_\mathrm{thx}" /> | `Hthx` | Thermosteric  sea level rise | mm |||
+| <img src="https://latex.codecogs.com/gif.latex?H_\mathrm{gla}" /> | `Hgla` | Glaciers' contribution to sea level rise | mm | *yes* ||
+| <img src="https://latex.codecogs.com/gif.latex?H_\mathrm{gis}" /> | `Hgis` | Grenland ice sheet's contribution to sea level rise | mm | *yes* ||
+| <img src="https://latex.codecogs.com/gif.latex?H_\mathrm{ais,smb}" /> | `Hais_smb` | Surface mass balance component of `Hais` | mm |||
+| <img src="https://latex.codecogs.com/gif.latex?H_\mathrm{ais}" /> | `Hais` | Antartica ice sheet's contribution to sea level rise | mm | *yes* ||
+| <img src="https://latex.codecogs.com/gif.latex?H_\mathrm{tot}" /> | `Htot` | Total sea level rise | mm |||
+| <img src="https://latex.codecogs.com/gif.latex?H_\mathrm{lia}" /> | `Hlia` | Sea level rise from relaxation after LIA between 1900 and 2005 (for calib.) | mm |||
 |||||||
 | <img src="https://latex.codecogs.com/gif.latex?C_{o,j}" /> | `Co_j` | Change in surface ocean carbon subpools | PgC | *yes* | <img src="https://latex.codecogs.com/gif.latex?j\in[\![1,5]\!]" /> |
 | <img src="https://latex.codecogs.com/gif.latex?C_o" /> | `Co` | Change in surface ocean carbon pool | PgC |||
@@ -61,7 +64,7 @@
 | <img src="https://latex.codecogs.com/gif.latex?C" /> | `CO2` | Atmospheric CO2 concentration | ppm | *yes* ||
 | <img src="https://latex.codecogs.com/gif.latex?\mathrm{pH}" /> | `pH` | Surface ocean pH | 1 |||
 
-<!----------->
+<!-----------> 'Lais_smb', 'lais0', 'Lais', 'tais', 'aais', 
 ### Parameters 
 
 | In manual | In code | Description | Units | Dims |
@@ -75,12 +78,22 @@
 | <img src="https://latex.codecogs.com/gif.latex?T_\mathrm{2\times}^*" /> | `T2x0` | Minimal value of the ECS distribution (for calib.) | K ||
 ||||||
 | <img src="https://latex.codecogs.com/gif.latex?\alpha_\mathrm{ohc}" /> | `aOHC` | Fraction of energy warming the ocean | 1 ||
-| <img src="https://latex.codecogs.com/gif.latex?\Lambda_\mathrm{lin}" /> | `Llin` | Linear factor for thermosteric SLR | mm m<sup>2</sup> W<sup>-1</sup> yr<sup>-1</sup> ||
-| <img src="https://latex.codecogs.com/gif.latex?\Lambda_\mathrm{thx}" /> | `Lthx` | Equilibrium thermosteric SLR | mm K<sup>-1</sup> ||
-| <img src="https://latex.codecogs.com/gif.latex?\Lambda_\mathrm{tot1}" /> | `Ltot1` | Linear equilibrium ice-related SLR | mm K<sup>-1</sup> ||
-| <img src="https://latex.codecogs.com/gif.latex?\Lambda_\mathrm{tot2}" /> | `Ltot2` | Quadratic equilibrium ice-related SLR | mm K<sup>-2</sup> ||
-| <img src="https://latex.codecogs.com/gif.latex?\tau_\mathrm{thx}" /> | `tthx` | Timescale of thermosteric SLR | yr ||
-| <img src="https://latex.codecogs.com/gif.latex?\tau_\mathrm{ice}" /> | `tice` | Timescale of ice-related SLR | yr ||
+| <img src="https://latex.codecogs.com/gif.latex?\Lambda_\mathrm{thx}" /> | `Lthx` | Proportionality factor of thermosteric SLR | mm m<sup>2</sup> W<sup>-1</sup> yr<sup>-1</sup> ||
+| <img src="https://latex.codecogs.com/gif.latex?\lambda_\mathrm{gla}" /> | `lgla0` | Initial imbalance in SLR from Glaciers | mm yr<sup>-1</sup> ||
+| <img src="https://latex.codecogs.com/gif.latex?\Lambda_\mathrm{gla}" /> | `Lgla` | Maximum contribution to SLR from Glaciers | mm ||
+| <img src="https://latex.codecogs.com/gif.latex?\Gamma_\mathrm{gla1}" /> | `Ggla1` | Linear sensitivity of steady-state Glaciers SLR to climate | K<sup>-1</sup> ||
+| <img src="https://latex.codecogs.com/gif.latex?\Gamma_\mathrm{gla3}" /> | `Ggla3` | Cubic sensitivity of steady-state Glaciers SLR to climate | K<sup>-3</sup> ||
+| <img src="https://latex.codecogs.com/gif.latex?\tau_\mathrm{gla}" /> | `tgla` | Timescale of Glaciers' contribution to SLR | yr ||
+| <img src="https://latex.codecogs.com/gif.latex?\gamma_\mathrm{gla}" /> | `ggla` | Sensitivity of Glaciers' timescale to climate | K<sup>-1</sup> ||
+| <img src="https://latex.codecogs.com/gif.latex?\lambda_\mathrm{gis}" /> | `lgis0` | Initial imbalance in SLR from GIS | mm yr<sup>-1</sup> ||
+| <img src="https://latex.codecogs.com/gif.latex?\Lambda_\mathrm{gis1}" /> | `Lgis1` | Linear sensitivity of steady-state GIS SLR to climate| mm K<sup>-1</sup> ||
+| <img src="https://latex.codecogs.com/gif.latex?\Lambda_\mathrm{gis3}" /> | `Lgis3` | Cubic sensitivity of steady-state GIS SLR to climate | mm K<sup>-3</sup> ||
+| <img src="https://latex.codecogs.com/gif.latex?\tau_\mathrm{gis}" /> | `tgis` | Timescale of GIS contribution to SLR | yr ||
+| <img src="https://latex.codecogs.com/gif.latex?\Lambda_\mathrm{ais,smb}" /> | `Lais_smb` | Sensitivity of AIS SMB increase due to climate | mm yr<sup>-1</sup> K<sup>-1</sup> ||
+| <img src="https://latex.codecogs.com/gif.latex?\lambda_\mathrm{ais}" /> | `lais` | Initial imbalance in SLR from AIS | mm yr<sup>-1</sup> ||
+| <img src="https://latex.codecogs.com/gif.latex?\Lambda_\mathrm{ais}" /> | `Lais` | Sensitivity of steady-state AIS SLR to climate | mm K<sup>-1</sup> ||
+| <img src="https://latex.codecogs.com/gif.latex?\tau_\mathrm{ais}" /> | `tais` | Timescale of AIS contribution to SLR | yr ||
+| <img src="https://latex.codecogs.com/gif.latex?\alpha_\mathrm{ais}" /> | `aais` | Sensitivity of AIS timescale to AIS SLR | mm<sup>-1</sup> ||
 ||||||
 | <img src="https://latex.codecogs.com/gif.latex?\alpha_\mathrm{dic}" /> | `adic` | Conversion factor for DIC | µmol kg<sup>-1</sup> PgC<sup>-1</sup> ||
 | <img src="https://latex.codecogs.com/gif.latex?\beta_\mathrm{dic}" /> | `bdic` | Inverse-scaling factor for DIC | 1 ||
@@ -186,37 +199,54 @@ U_\mathrm{ohc} =
 " />
 
 * <img style="vertical-align:middle" src="https://latex.codecogs.com/gif.latex? 
-H_\mathrm{lin} = 
-\Lambda_\mathrm{lin} \: U_\mathrm{ohc}
+H_\mathrm{thx} = 
+\Lambda_\mathrm{thx} \: U_\mathrm{ohc}
 " />
 
 * <img style="vertical-align:middle" src="https://latex.codecogs.com/gif.latex? 
-\frac{\mathrm{d} H_\mathrm{lin}}{\mathrm{d} t} = 
-\Lambda_\mathrm{lin} \: \frac{\mathrm{d} U_\mathrm{ohc}}{\mathrm{d} t}
+\frac{\mathrm{d} H_\mathrm{thx}}{\mathrm{d} t} = 
+\Lambda_\mathrm{thx} \: \frac{\mathrm{d} U_\mathrm{ohc}}{\mathrm{d} t}
 " />
 
 ###### prognostic
 
 * <img style="vertical-align:middle" src="https://latex.codecogs.com/gif.latex? 
-\frac{\mathrm{d} H_\mathrm{thx}}{\mathrm{d} t} = 
-\frac{\mathrm{d} H_\mathrm{lin}}{\mathrm{d} t} - \frac{H_\mathrm{thx} - H_\mathrm{lin}}{\tau_\mathrm{thx}} + \frac{\Lambda_\mathrm{thx} - \Lambda_\mathrm{lin} \: \alpha_\mathrm{ohc} \: (\Theta_s + \Theta_d)}{\tau_\mathrm{thx}} \: T_d
+\frac{\mathrm{d} H_\mathrm{gla}}{\mathrm{d} t} = 
+\lambda_\mathrm{gla} + \frac{\exp (\gamma_\mathrm{gla} \: T)}{\tau_\mathrm{gla}} \: (\Lambda_\mathrm{gla} \: (1 - \exp (-\Gamma_\mathrm{gla1} \: T - \Gamma_\mathrm{gla3} \: T^3)) - H_\mathrm{gla})
 " />
 
 * <img style="vertical-align:middle" src="https://latex.codecogs.com/gif.latex? 
-\frac{\mathrm{d} H_\mathrm{tot}}{\mathrm{d} t} = 
-\frac{\mathrm{d} H_\mathrm{thx}}{\mathrm{d} t} - \frac{H_\mathrm{tot} - H_\mathrm{thx}}{\tau_\mathrm{ice}} + \frac{\Lambda_\mathrm{tot1} + \Lambda_\mathrm{tot2} \: T - \Lambda_\mathrm{thx}}{\tau_\mathrm{ice}} \: T
+\frac{\mathrm{d} H_\mathrm{gis}}{\mathrm{d} t} = 
+\lambda_\mathrm{gis} + \frac{1}{\tau_\mathrm{gis}} \: (\Lambda_\mathrm{gis1} \: T + \Lambda_\mathrm{gis3} \: T^3 - H_\mathrm{gis})
+" />
+
+* <img style="vertical-align:middle" src="https://latex.codecogs.com/gif.latex? 
+\frac{\mathrm{d} H_\mathrm{ais,smb}}{\mathrm{d} t} = 
+-\Lambda_\mathrm{ais_smb} \: T
+" />
+
+* <img style="vertical-align:middle" src="https://latex.codecogs.com/gif.latex? 
+\frac{\mathrm{d} H_\mathrm{ais}}{\mathrm{d} t} = 
+\frac{\mathrm{d} H_\mathrm{ais,smb}}{\mathrm{d} t} + \lambda_\mathrm{ais} + \frac{1 + \alpha_\mathrm{ais} \: (H_\mathrm{ais} - H_\mathrm{ais,smb})}{\tau_\mathrm{ais}} \: (\Lambda_\mathrm{ais} \: T - (H_\mathrm{ais} - H_\mathrm{ais,smb}))
 " />
 
 ###### diagnostic (2nd)
 
 * <img style="vertical-align:middle" src="https://latex.codecogs.com/gif.latex? 
-H_\mathrm{ice} = 
-H_\mathrm{tot} - H_\mathrm{thx}
+H_\mathrm{tot} = 
+H_\mathrm{thx} + H_\mathrm{gla} + H_\mathrm{gis} + H_\mathrm{ais}
 " />
 
 * <img style="vertical-align:middle" src="https://latex.codecogs.com/gif.latex? 
-\frac{\mathrm{d} H_\mathrm{ice}}{\mathrm{d} t} = 
-\frac{\mathrm{d} H_\mathrm{tot}}{\mathrm{d} t} - \frac{\mathrm{d} H_\mathrm{thx}}{\mathrm{d} t}
+\frac{\mathrm{d} H_\mathrm{tot}}{\mathrm{d} t} = 
+\frac{\mathrm{d} H_\mathrm{thx}}{\mathrm{d} t} + \frac{\mathrm{d} H_\mathrm{gla}}{\mathrm{d} t} + \frac{\mathrm{d} H_\mathrm{gis}}{\mathrm{d} t} + \frac{\mathrm{d} H_\mathrm{ais}}{\mathrm{d} t}
+" />
+
+###### diagnostic (3rd; for calib.)
+
+* <img style="vertical-align:middle" src="https://latex.codecogs.com/gif.latex? 
+H_\mathrm{lia} = 
+\sum_{\mathrm{ice} \in \{\mathrm{gla}, \mathrm{gis}, \mathrm{ais}\}} \lambda_\mathrm{ice} \: \tau_\mathrm{ice} \: (\exp (-150 / \tau_\mathrm{ice}) - \exp (-205 / \tau_\mathrm{ice}))
 " />
 
 <!---------------->

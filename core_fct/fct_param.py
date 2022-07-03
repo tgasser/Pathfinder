@@ -22,11 +22,11 @@ import matplotlib.pyplot as plt
 
 from scipy.optimize import fsolve, fmin
 
-from core_fct.fct_load import load_CMIP6_climate, load_CMIP5_ocean, load_CMIP6_ocean, load_TRENDYv7_land, load_CMIP5_land, load_CMIP6_land
+from core_fct.fct_load import load_gmst, load_CMIP6_climate, load_CMIP5_ocean, load_CMIP6_ocean, load_TRENDYv7_land, load_CMIP5_land, load_CMIP6_land, load_Edwards_2021_slr
 
 
 ##################################################
-## LOAD PARAMETERS
+## CALIBRATE PARAMETERS
 ##################################################
 
 ##=============
@@ -197,6 +197,7 @@ def get_param_clim(data='CMIP6', get_irf_param=False):
 ## (Arora et al., 2013; doi:10.1175/JCLI-D-12-00494.1) (from CMIP5 models' outputs)
 ## (Arora et al., 2019; doi:10.5194/bg-17-4173-2020) (from CMIP6 models' outputs)
 def get_param_ocean(struct='Bern2.5D', get_original=False, data='CMIP6', display_fit=False):
+    folder_out = 'internal_data/prior_calib/'
 
     ## initialise local dataset
     Par = xr.Dataset()
@@ -352,8 +353,9 @@ def get_param_ocean(struct='Bern2.5D', get_original=False, data='CMIP6', display
     Par['ggx'].attrs['units'] = Par['gdic'].attrs['units'] = 'K-1'
     Par['bdic'].attrs['units'] = '1'
 
-    ## return
+    ## save and return
     Par = Par.drop(['Ho', 'Ao'])
+    Par.to_netcdf(folder_out + 'param_ocean.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Par})
     return Par
 
 
@@ -405,9 +407,7 @@ def get_param_landPI(data='TRENDYv7'):
 ## (Arora et al., 2013; doi:10.1175/JCLI-D-12-00494.1) (from CMIP5 outputs)
 ## (Arora et al., 2019; doi:10.5194/bg-17-4173-2020) (from CMIP6 outputs)
 def get_param_land(data='CMIP6', log_npp=False, display_fit=False):
-
-    ## initialise local dataset
-    Par = xr.Dataset()
+    folder_out = 'internal_data/prior_calib/'
 
     ## load CMIP data
     ## (and list of simulations)
@@ -420,7 +420,8 @@ def get_param_land(data='CMIP6', log_npp=False, display_fit=False):
     else: 
         raise ValueError
 
-    ## initialise new parameters
+    ## initialise local dataset
+    Par = xr.Dataset()
     for var in ['bnpp', 'anpp', 'gnpp', 'bfire', 'gfire', 'brh', 'grh']:
         Par[var] = xr.zeros_like(Var.model_land, dtype=float)
 
@@ -531,6 +532,151 @@ def get_param_land(data='CMIP6', log_npp=False, display_fit=False):
     Par['bnpp'].attrs['units'] = Par['anpp'].attrs['units'] = Par['bfire'].attrs['units'] = Par['brh'].attrs['units'] = '1'
     Par['gnpp'].attrs['units'] = Par['gfire'].attrs['units'] = Par['grh'].attrs['units'] = 'K-1'
 
-    ## return
+    ## save and return
+    Par.to_netcdf(folder_out + 'param_land.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Par})
+    return Par
+
+
+##===============
+## Sea level rise
+##===============
+
+## get structural parameters
+## (Mengel et al., 2016; doi:10.1073/pnas.1500515113)
+## & sensitivities of sea level rise
+## (Edwards et al., 2021; doi:10.1038/s41586-021-03302-y) (from compiled outputs)
+def get_param_slr(fixed_param, display_fit=False):
+    folder_out='internal_data/prior_calib/'
+
+    ## get fixed parameters
+    tgla_bg, tgis_bg, tais_bg = [fixed_param[var] for var in ['tgla', 'tgis', 'tais']]
+    Lgla_bg, Lais_bg = [fixed_param[var] for var in ['Lgla', 'Lais']]
+
+    ## load Edwards et al. data
+    GLA = load_Edwards_2021_slr(ice='gla')
+    GIS = load_Edwards_2021_slr(ice='gis')
+    AIS = load_Edwards_2021_slr(ice='ais')
+
+    ## restrict config/model to available data and more than one experiment
+    GLA_model = xr.concat([mod for mod in GLA.model if (GLA.slr.sel(model=mod).isel(year=-1).notnull().sum('region') >= len(GLA.region)-1).sum() > 1], dim='model')
+    GIS_config = xr.concat([cfg for cfg in GIS.config if GIS.slr.sel(config=cfg).isel(year=-1).sel(region='ALL', drop=True).notnull().sum() > 1], dim='config')
+    AIS_config = xr.concat([cfg for cfg in AIS.config if (AIS.slr.sel(config=cfg).isel(year=-1).notnull().sum('region') == len(AIS.region)).sum() > 1], dim='config')
+
+    ## initialise local dataset
+    Par = xr.Dataset()
+    for var in ['lgla0', 'Lgla', 'Ggla1', 'Ggla3', 'tgla', 'ggla']:
+        Par[var] = np.nan * xr.zeros_like(GLA_model, dtype=float).rename({'model': 'cfg_gla'})
+    for var in ['lgis0', 'Lgis1', 'Lgis3', 'tgis']:
+        Par[var] = np.nan * xr.zeros_like(GIS_config, dtype=float).rename({'config': 'cfg_gis'}).drop('model')
+    for var in ['lais0', 'Lais_smb', 'Lais', 'tais', 'aais']:
+        Par[var] = np.nan * xr.zeros_like(AIS_config, dtype=float).rename({'config': 'cfg_ais'}).drop('model')
+
+    ## calibration of GLA
+    if display_fit: plt.figure()
+    for m, model in enumerate(GLA_model):
+        
+        ## get data
+        H = GLA.slr.sum('region', min_count=1).sel(model=model).dropna('year', how='all').dropna('exp')
+        H_0 = 67.2 - 3 * 0.62 # AR6 WG1 Table 9.5
+        d_H = H.differentiate('year')
+        d_H0 = 0.58 # AR6 WG1 Table 9.5
+        D_tas = GLA.tas.sel(year=H.year, exp=H.exp)
+       
+        ## fit data
+        err1 = lambda par: (( d_H0 + (Lgla_bg * (1 - np.exp(-par[2] * D_tas - par[3] * D_tas**3)) - (H + H_0)) / tgla_bg * np.exp(par[5] * D_tas)  - d_H )**2.).sum().values
+        par, _, _, _, fmin_flag = fmin(err1, [d_H0, Lgla_bg, 0.2, 0.0, tgla_bg, 0.0], disp=False, full_output=True, maxiter=2000, maxfun=2000)
+        Par['lgla0'][m] = d_H0 if fmin_flag == 0 else np.nan
+        Par['Lgla'][m] = Lgla_bg if fmin_flag == 0 else np.nan
+        Par['Ggla1'][m] = par[2] if fmin_flag == 0 else np.nan
+        Par['Ggla3'][m] = par[3] if fmin_flag == 0 else np.nan
+        Par['tgla'][m] = tgla_bg if fmin_flag == 0 else np.nan
+        Par['ggla'][m] = par[5] if fmin_flag == 0 else np.nan
+        
+        ## plot fit
+        if display_fit:
+            N = int(np.ceil(max(np.roots((1, 1, -len(GLA_model))))))
+            plt.subplot(N, N+1, m+1)
+            plt.plot(d_H, marker='+', ls='none')
+            plt.plot(Par['lgla0'][m] + (Par['Lgla'][m] * (1 - np.exp(-Par['Ggla1'][m] * D_tas - Par['Ggla3'][m] * D_tas**3)) - (H + H_0)) / Par['tgla'][m] * np.exp(Par['ggla'][m] * D_tas), color='k')
+            plt.title('tas => d_H | ' + str(model.values) + '\n' + 
+                'Ggla1 = {0:.1f}, Ggla3 = {1:.1f}, ggla = {2:.1f}'.format(*[Par[var][m].values for var in ['Ggla1', 'Ggla3', 'ggla']]), fontsize='small')
+
+    ## calibration of GIS
+    if display_fit: plt.figure()
+    for m, model in enumerate(GIS_config):
+        
+        ## get data
+        H = GIS.slr.sum('region', min_count=1).sel(config=model).dropna('year', how='all').dropna('exp')
+        H_0 = 40.4 - 3 * 0.63 # AR6 WG1 Table 9.5
+        d_H = H.differentiate('year')
+        d_H0 = 0.33 # AR6 WG1 Table 9.5
+        D_tas = GIS.tas.sel(year=H.year, exp=H.exp)
+       
+        ## fit data
+        err2 = lambda par: (( d_H0 + (par[1] * D_tas + par[2] * D_tas**3 - (H + H_0)) / tgis_bg  - d_H )**2.).sum().values
+        par, _, _, _, fmin_flag = fmin(err2, [d_H0, 3., 2., tgis_bg], disp=False, full_output=True, maxiter=1000, maxfun=1000)
+        Par['lgis0'][m] = d_H0 if fmin_flag == 0 else np.nan
+        Par['Lgis1'][m] = par[1] if fmin_flag == 0 else np.nan
+        Par['Lgis3'][m] = par[2] if fmin_flag == 0 else np.nan
+        Par['tgis'][m] = tgis_bg if fmin_flag == 0 else np.nan
+        
+        ## plot fit
+        if display_fit:
+            N = int(np.ceil(max(np.roots((1, 1, -len(GIS_config))))))
+            plt.subplot(N, N+1, m+1)
+            plt.plot(d_H, marker='+', ls='none')
+            plt.plot(Par['lgis0'][m] + (Par['Lgis1'][m] * D_tas + Par['Lgis3'][m] * D_tas**3 - (H + H_0)) / Par['tgis'][m], color='k')
+            plt.title('tas => d_H | ' + str(model.values) + '\n' + 
+                'Lgis1 = {0:.1f}, Lgis3 = {1:.1f}'.format(*[Par[var][m].values for var in ['Lgis1', 'Lgis3']]), fontsize='small')
+
+    ## calibration of AIS
+    if display_fit: plt.figure()
+    for m, model in enumerate(AIS_config):
+        
+        ## get data
+        H = AIS.slr.sum('region', min_count=1).sel(config=model).dropna('year', how='all').dropna('exp')
+        H_0 = 6.7 - 3 * 0.37 # AR6 WG1 Table 9.5
+        d_H = H.differentiate('year')
+        d_H0 = 0.00 # AR6 WG1 Table 9.5
+        D_tas = AIS.tas.sel(year=H.year, exp=H.exp)
+        sum_tas_0 = load_gmst().T.sel(year=slice(1901, 2014)).sum('year').mean('data').values
+        sum_tas = D_tas.cumsum('year') + sum_tas_0
+       
+        ## fit data
+        err3 = lambda par: (( -abs(par[1]) * D_tas + d_H0 + (Lais_bg * D_tas - (H + H_0 - -abs(par[1]) * sum_tas)) / tais_bg * (1 + par[4] * (H + H_0 - -abs(par[1]) * sum_tas)) - d_H )**2.).sum().values
+        par, _, _, _, fmin_flag = fmin(err3, [d_H0, 0.1, Lais_bg, tais_bg, 0.], disp=False, full_output=True, maxiter=3000, maxfun=3000)
+        Par['lais0'][m] = d_H0 if fmin_flag == 0 else np.nan
+        Par['Lais_smb'][m] = abs(par[1]) if fmin_flag == 0 else np.nan
+        Par['Lais'][m] = Lais_bg if fmin_flag == 0 else np.nan
+        Par['tais'][m] = tais_bg if fmin_flag == 0 else np.nan
+        Par['aais'][m] = par[4] if fmin_flag == 0 else np.nan
+
+        ## plot fit
+        if display_fit:
+            N = int(np.ceil(max(np.roots((1, 1, -len(AIS_config))))))
+            plt.subplot(N, N+1, m+1)
+            plt.plot(d_H, marker='+', ls='none')
+            plt.plot(-Par['Lais_smb'][m] * D_tas + Par['lais0'][m] + (Par['Lais'][m] * D_tas - (H + H_0 - -Par['Lais_smb'][m] * sum_tas)) / Par['tais'][m] * (1 + Par['aais'][m] * (H + H_0 - -Par['Lais_smb'][m] * sum_tas)), color='k')
+            plt.title('tas => d_H | ' + str(model.values) + '\n' + 
+                'Lais_smb = {0:.1f}, aais = {1:.1f}'.format(*[Par[var][m].values for var in ['Lais_smb', 'aais']]), fontsize='small')
+
+    ## remove config axis is constant
+    for var in Par:
+        if all(np.isclose(Par[var], Par[var].mean())):
+            Par[var] = Par[var].mean()
+
+    ## units
+    Par['lgla0'].attrs['units'] = Par['lgis0'].attrs['units'] = Par['lais0'].attrs['units'] = 'mm yr-1'
+    Par['Lgla'].attrs['units'] = 'mm'
+    Par['Ggla1'].attrs['units'] = Par['ggla'].attrs['units'] = 'K-1'
+    Par['Ggla3'].attrs['units'] = 'K-3'
+    Par['tgla'].attrs['units'] = Par['tgis'].attrs['units'] = Par['tais'].attrs['units'] = 'yr'
+    Par['Lgis1'].attrs['units'] = Par['Lais'].attrs['units'] = 'mm K-1'
+    Par['Lgis3'].attrs['units'] = 'mm K-3'
+    Par['Lais_smb'].attrs['units'] = 'mm yr-1 K-1'
+    Par['aais'].attrs['units'] = 'mm-1'
+
+    ## save and return
+    Par.to_netcdf(folder_out + 'param_slr.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Par})
     return Par
 
