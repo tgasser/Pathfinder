@@ -148,7 +148,7 @@ def load_IPCC_AR6_WG1():
 def load_NOAA_ESRL():
 
     ## properties
-    path_list = ['input_data/' + path for path in ['co2_annmean_gl.txt', 'co2_annmean_mlo.txt']]
+    path_list = ['input_data/obs_CO2/' + path for path in ['co2_annmean_gl.txt', 'co2_annmean_mlo.txt']]
     site_list = ['global', 'mauna_loa']
 
     ## global average (https://www.esrl.noaa.gov/gmd/ccgg/trends/gl_data.html)
@@ -191,7 +191,7 @@ def load_NOAA_ESRL():
 def load_gmst(ref_period=(1880, 1900), take_all=False, get_trend=False, trend_over=21, make_plot=False):
 
     ## properties
-    path_list = ['input_data/' + path for path in ['HadCRUT.4.6.0.0.annual_ns_avg.txt', 'had4_krig_annual_v2_0_0.txt', 'Land_and_Ocean_summary.txt', 'GLB.Ts+dSST.csv', 'aravg.ann.land_ocean.90S.90N.v5.0.0.202103.asc', 'year_wld.csv']]
+    path_list = ['input_data/obs_T/' + path for path in ['HadCRUT.4.6.0.0.annual_ns_avg.txt', 'had4_krig_annual_v2_0_0.txt', 'Land_and_Ocean_summary.txt', 'GLB.Ts+dSST.csv', 'aravg.ann.land_ocean.90S.90N.v5.0.0.202103.asc', 'year_wld.csv']]
     data_list = ['HadCRUT4', 'Cowtan_and_Way', 'Berkeley_Earth', 'GISTEMP', 'NOAA_MLOST', 'JMA']
 
     ## loop on datasets
@@ -222,7 +222,7 @@ def load_gmst(ref_period=(1880, 1900), take_all=False, get_trend=False, trend_ov
         var_out = xr.merge([var_out, xr.Dataset({'T': var})])
 
     ## add HadCRUT5 on top (netcdf file)
-    with xr.open_dataset('input_data/HadCRUT.5.0.1.0.analysis.summary_series.global.annual.nc') as TMP: TMP = TMP.load()
+    with xr.open_dataset('input_data/obs_T/HadCRUT.5.0.1.0.analysis.summary_series.global.annual.nc') as TMP: TMP = TMP.load()
     TMP = TMP.groupby('time.year').mean('time').tas_mean[:-1]
     TMP = TMP.drop(['realization', 'latitude', 'longitude']).assign_coords(data='HadCRUT5').expand_dims('data', -1)
     var_out = xr.merge([var_out, xr.Dataset({'T': TMP})])
