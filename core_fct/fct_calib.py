@@ -25,6 +25,7 @@ from time import perf_counter
 
 from core_fct.cls_calib import my_AR1
 from core_fct.mod_OBSdriven import PF_OBSdriven as PF
+from core_fct.mod_Edriven import PF_Edriven as PFe
 from core_fct.fct_ancillary import lognorm_distrib_param, logitnorm_distrib_param
 from core_fct.fct_default import get_dflt_param, get_dflt_forcing, get_dflt_constr
 
@@ -392,10 +393,10 @@ def post_calib(folder_calib, name=None, save_prior=False, save_Var2=False, write
     Par2_post.to_netcdf(folder_calib + '/../Par2_' + name + '.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Par2_post})
     Par1_post = Par_post.drop(ar1_pars.keys())
     Par1_post.to_netcdf(folder_calib + '/../Par_' + name + '.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Par1_post})
-    Var_post = xr.merge([For_post, Out_post.drop([var for var in Out_post if var not in PF.Var_name])])
+    Var_post = xr.merge([For_post, Out_post.drop([var for var in Out_post if var not in PF.Var_name + PFe.For_name])])
     Var_post.to_netcdf(folder_calib + '/../Var_' + name + '.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Var_post})
     if save_Var2:
-        Var2_post = Out_post.drop([var for var in Out_post if var in PF.Var_name])
+        Var2_post = Out_post.drop([var for var in Out_post if var in PF.Var_name + PFe.For_name])
         Var2_post.to_netcdf(folder_calib + '/../Var2_' + name + '.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Var2_post})
     Con_post.to_netcdf(folder_calib + '/../Con_' + name + '.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Con_post})
 
@@ -405,10 +406,10 @@ def post_calib(folder_calib, name=None, save_prior=False, save_Var2=False, write
         Par2_prior.to_netcdf(folder_calib + '/../Par2_' + name + '_prior.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Par2_prior})
         Par1_prior = Par_prior.drop(ar1_pars.keys())
         Par1_prior.to_netcdf(folder_calib + '/../Par_' + name + '_prior.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Par1_prior})
-        Var_prior = xr.merge([For_prior, Out_prior.drop([var for var in Out_prior if var not in PF.Var_name])])
+        Var_prior = xr.merge([For_prior, Out_prior.drop([var for var in Out_prior if var not in PF.Var_name + PFe.For_name])])
         Var_prior.to_netcdf(folder_calib + '/../Var_' + name + '_prior.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Var_prior})
         if save_Var2:
-            Var2_prior = Out_prior.drop([var for var in Out_prior if var in PF.Var_name])
+            Var2_prior = Out_prior.drop([var for var in Out_prior if var in PF.Var_name + PFe.For_name])
             Var2_prior.to_netcdf(folder_calib + '/../Var2_' + name + '_prior.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Var2_prior})
         Con_prior.to_netcdf(folder_calib + '/../Con_' + name + '_prior.nc', encoding={var:{'zlib':True, 'dtype':np.float32} for var in Con_prior})
 

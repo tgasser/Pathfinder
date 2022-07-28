@@ -164,7 +164,7 @@ print((6*'{:>20}').format('C_ocean Pathfinder', *[print_sym0(C_ocean.sel(scen=sc
 print((6*'{:>20}').format('C_ocean CMIP6/AR6', *['111 +- 11', '162 +- 8', '252 +- 11', '338 +- 15', '398 +- 17']))
 print(6*20*'-')
 print((6*'{:>20}').format('C_land Pathfinder', *[print_sym0(C_land.sel(scen=scen)) for scen in scen_ref]))
-print((6*'{:>20}').format('C_land CMIP6/AR6', *['99 +- 33', '173 +- 50', '205 +- 76', '124 +- 124', '230 +- 162']))
+print((6*'{:>20}').format('C_land CMIP6/AR6', *['73 +- 33', '120 +- 50', '178 +- 76', '269 +- 124', '311 +- 162']))
 
 ## slr
 ## (Fox-Kemper et al., 2021; doi:10.1017/9781009157896.011) (Table 9.9)

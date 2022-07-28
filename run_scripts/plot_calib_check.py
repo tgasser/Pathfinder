@@ -150,7 +150,7 @@ Par_list = [Par_prior, Par_post] + Par_extra
 Par_name = ['prior', 'post.'] + ['extra'+str(n) for n in range(len(name_extra))]
 
 ## nb of parameters per group
-grp_nb = [6, 7, 6, 15, 4, 1]
+grp_nb = [7, 11, 6, 15, 4, 1]
 grp_name = ['climate', 'sea level', 'ocean C', 'land C', 'pf. C', '']
 
 ## figure

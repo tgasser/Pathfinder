@@ -64,7 +64,7 @@
 | <img src="https://latex.codecogs.com/gif.latex?C" /> | `CO2` | Atmospheric CO2 concentration | ppm | *yes* ||
 | <img src="https://latex.codecogs.com/gif.latex?\mathrm{pH}" /> | `pH` | Surface ocean pH | 1 |||
 
-<!-----------> 'Lais_smb', 'lais0', 'Lais', 'tais', 'aais', 
+<!----------->
 ### Parameters 
 
 | In manual | In code | Description | Units | Dims |

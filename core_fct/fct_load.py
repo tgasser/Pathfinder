@@ -185,7 +185,7 @@ def load_NOAA_ESRL():
 ## Cowtan_and_Way: (Cowtan & Way, 2014; doi:10.1002/qj.2297; http://www-users.york.ac.uk/~kdc3/papers/coverage2013/series.html)
 ## Berkeley_Earth: (Rhodes et al., 2013a,b; doi:10.4172/gigs.1000101, doi:10.4172/gigs.1000103; http://berkeleyearth.org/data/)
 ## GISTEMP: (Hansen et al., 2010; doi:10.1029/2010RG000345; https://data.giss.nasa.gov/gistemp/)
-## NOAAGlobalTemp: (Russel et al., 2012; doi:10.1175/BAMS-D-11-00241.1; https://www.ncei.noaa.gov/products/land-based-station/noaa-global-temp)
+## NOAAGlobalTemp: (Huang et al., 2020; doi:10.1175/JCLI-D-19-0395.1; https://www.ncei.noaa.gov/products/land-based-station/noaa-global-temp)
 ## JMA: (Japan Meteorological Agency, 2019; https://ds.data.jma.go.jp/tcc/tcc/products/gwp/gwp.html)
 def load_gmst(ref_period=(1850, 1900), ignore_data=[], get_trend=False, trend_over=21, make_plot=False):
 
