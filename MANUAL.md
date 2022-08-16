@@ -1,4 +1,16 @@
+# Pathfinder
 
+*Manual*
+
+## Run a simulation
+
+Very basic instructions for now:
+* import the model: `from core_fct.mod_Cdriven import PF_Cdriven as PF`;
+* create or load parameters (`Par`), some drivers (`For`), and optionally initial states (`Ini`);
+* run the model (with xarray): `Var = PF.run_xarray(Par, For, get_Var2=True)`;
+* enjoy!
+
+For a clearer example, see `run_scripts/run_diagnostics`.
 
 <!--------->
 <!--------->

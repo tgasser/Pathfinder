@@ -1,6 +1,6 @@
 """
 Copyright IIASA (International Institute for Applied Systems Analysis), 2019-2022
-Contributor(s): Thomas Gasser (gasser@iiasa.ac.at)
+Contributor(s): Thomas Gasser (gasser@iiasa.ac.at), Thomas Bossy (thomas.bossy@lsce.ipsl.fr)
 
 This software is a computer program whose purpose is simulate a large number of global climate (and environmental) change scenarios.
 
